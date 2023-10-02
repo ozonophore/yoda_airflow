@@ -1,5 +1,5 @@
 ```shell
-echo -e "AIRFLOW_UID=$(id -u)" > .env
+echo -e "AIRFLOW_UID=$(id -u) \nAIRFLOW_CONN_DATABASE=postgresql://user:password@ip:port/db" > .env
 ```
 ```shell
 echo -e "AIRFLOW_CONN_DATABASE=postgresql://user:password@ip:port/db" > .env

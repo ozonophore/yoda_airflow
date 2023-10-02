@@ -69,9 +69,9 @@ with DAG(
     #
     for row in get_connections():
         @task(task_id="get_secret_token_" + row[0].lower())
-        def get_secret_token_task():
+        def get_secret_token_task(clientId, clientSecret):
             url = default_args["url"]
-            return get_secret_token(row[2], row[3], url)
+            return get_secret_token(clientId, clientSecret, url)
 
 
         @task(task_id="prepare_report_traffic_" + row[0].lower())
@@ -85,64 +85,18 @@ with DAG(
 
 
         @task(task_id="write_status_ts_" + row[0].lower())
-        def write_status_ts_task(uuid):
-            write_status(uuid, row[0], 'TRAFFIC_SOURCES')
+        def write_status_ts_task(uuid, client):
+            write_status(uuid, client, 'TRAFFIC_SOURCES')
 
 
         @task(task_id="write_status_o_" + row[0].lower())
-        def write_status_o_task(uuid):
-            write_status(uuid, row[0], 'ORDERS')
+        def write_status_o_task(uuid, client):
+            write_status(uuid, client, 'ORDERS')
 
 
-        access_token = get_secret_token_task()
-        write_status_ts_task(prepare_report_traffic_task(access_token))
-        write_status_o_task(prepare_report_orders_task(access_token))
-
-        # task = PythonOperator(
-        #     task_id="get_secret_token_" + row[0].lower(),
-        #     python_callable=get_secret_token,
-        #     doc="Получение токена для доступа к API",
-        #     op_kwargs={'clientId': row[2],
-        #                'clientSecret': row[3],
-        #                'url': default_args["url"]}
-        # )
-        # prepare_report_traffic_task = PythonOperator(
-        #     task_id="prepare_report_traffic_" + row[0].lower(),
-        #     python_callable=prepare_report,
-        #     op_kwargs={'token': task.output, 'dataType': "TRAFFIC_SOURCES"}
-        # )
-        #
-        # @task
-        # def write_status_ts(uuid, owner_code):
-        #     write_status(uuid, owner_code, 'TRAFFIC_SOURCES')
-        #
-        # prepare_report_traffic_task >> write_status_ts(row[0], row[1])
-        # prepare_report_orders_task = PythonOperator(
-        #     task_id="prepare_report_orders_" + row[0].lower(),
-        #     python_callable=prepare_report,
-        #     op_kwargs={'token': task.output, 'dataType': "ORDERS"}
-        # )
-        # write_status_o = PostgresOperator(
-        #     task_id="write_status_orders_" + row[0].lower(),
-        #     postgres_conn_id="database",
-        #     sql="insert into ml.statistic_request(uuid, owner_code, source, request_date, status, date_from, date_to, type) " +
-        #         "values (%(uuid)s, %(owner_code)s, 'OZON', now(), 'NOT_STARTED', now()::date - interval '3 month', now()::date, %(type)s);",
-        #     parameters={'uuid': prepare_report_orders_task.output, 'owner_code': row[0], 'type': 'ORDERS'}
-        # )
-        # prepare_report_orders_task >> write_status_o
-
-    #
-    # prepare_report_traffic_task = PythonOperator(
-    #     task_id="prepare_report_traffic",
-    #     python_callable=prepare_report,
-    #     op_kwargs={'token': get_secret_token_task.output, 'dataType': "TRAFFIC_SOURCES"}
-    # )
-    #
-    # prepare_report_orders_task = PythonOperator(
-    #     task_id="prepare_report_orders",
-    #     python_callable=prepare_report,
-    #     op_kwargs={'token': get_secret_token_task.output, 'dataType': "ORDERS"}
-    # )
+        access_token = get_secret_token_task(row[2], row[3])
+        write_status_ts_task(prepare_report_traffic_task(access_token), row[0])
+        write_status_o_task(prepare_report_orders_task(access_token), row[0])
 
 
 class SkipTaskException:

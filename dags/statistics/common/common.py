@@ -6,10 +6,12 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 def get_secret_token(clientId, clientSecret, url):
     logging.info("URL: %s", url)
+    logging.info("Client ID: %s", clientId)
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
     data = {"client_id": clientId,
             "client_secret": clientSecret,
             "grant_type": "client_credentials"}
+    logging.info("Data: %s", data)
     response = requests.post(url, headers=headers, json=data)
     if response.status_code != 200:
         raise Exception("Error getting token ", response.status_code, response.text)
