@@ -237,6 +237,8 @@ services:
         cpus_available=$$(grep -cE 'cpu[0-9]+' /proc/stat)
         disk_available=$$(df / | tail -1 | awk '{print $$4}')
         warning_resources="false"
+        echo "Checking resources at the start of the script..."
+        echo "Check RAM"
         if (( mem_available < 4000 )) ; then
           echo
           echo -e "\033[1;33mWARNING!!!: Not enough memory available for Docker.\e[0m"
@@ -244,6 +246,7 @@ services:
           echo
           warning_resources="true"
         fi
+        echo "Check CPU"
         if (( cpus_available < 2 )); then
           echo
           echo -e "\033[1;33mWARNING!!!: Not enough CPUS available for Docker.\e[0m"
@@ -251,6 +254,7 @@ services:
           echo
           warning_resources="true"
         fi
+        echo "Check Disk Space"
         if (( disk_available < one_meg * 10 )); then
           echo
           echo -e "\033[1;33mWARNING!!!: Not enough Disk space available for Docker.\e[0m"
@@ -258,6 +262,7 @@ services:
           echo
           warning_resources="true"
         fi
+        echo "Warning resources: $${warning_resources}"
         if [[ $${warning_resources} == "true" ]]; then
           echo
           echo -e "\033[1;33mWARNING!!!: You have not enough resources to run Airflow (see above)!\e[0m"
@@ -265,6 +270,7 @@ services:
           echo "   https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html#before-you-begin"
           echo
         fi
+        echo "Initializing airflow ..."
         mkdir -p /sources/logs /sources/dags /sources/plugins /sources/data
         chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins,data}
         exec /entrypoint airflow version
