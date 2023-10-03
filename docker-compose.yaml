@@ -57,10 +57,10 @@ x-airflow-common:
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@212.48.159.224:5432/airflow
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@host.docker.internal:5432/airflow
     # For backward compatibility, with Airflow <2.3
-    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@212.48.159.224:5432/airflow
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@212.48.159.224:5432/airflow
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@host.docker.internal:5432/airflow
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@host.docker.internal:5432/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
@@ -74,6 +74,7 @@ x-airflow-common:
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    TZ: Europe/Moscow
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
@@ -125,6 +126,8 @@ services:
     restart: always
     networks:
       - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   airflow-webserver:
     <<: *airflow-common
@@ -144,6 +147,8 @@ services:
         condition: service_completed_successfully
     networks:
       - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   airflow-scheduler:
     <<: *airflow-common
@@ -161,6 +166,8 @@ services:
         condition: service_completed_successfully
     networks:
       - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   airflow-worker:
     <<: *airflow-common
@@ -186,6 +193,8 @@ services:
         condition: service_completed_successfully
     networks:
       - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   airflow-triggerer:
     <<: *airflow-common
@@ -203,6 +212,8 @@ services:
         condition: service_completed_successfully
     networks:
       - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   airflow-init:
     <<: *airflow-common
@@ -290,6 +301,8 @@ services:
       - ${AIRFLOW_PROJ_DIR:-.}:/sources
     networks:
       - default
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   airflow-cli:
     <<: *airflow-common
