@@ -273,6 +273,7 @@ services:
         echo "Initializing airflow ..."
         mkdir -p /sources/logs /sources/dags /sources/plugins /sources/data
         chown -R "${AIRFLOW_UID}:0" /sources/{logs,dags,plugins,data}
+        echo "Airflow version:"
         exec /entrypoint airflow version
     # yamllint enable rule:line-length
     environment:
