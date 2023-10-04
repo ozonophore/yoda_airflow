@@ -99,10 +99,6 @@ with DAG(
         write_status_o_task(prepare_report_orders_task(access_token), row[0])
 
 
-class SkipTaskException:
-    pass
-
-
 with DAG(
         dag_id="performance_ozon_check_status",
         description="Проверка статуса заявки и выгрузка файла.",
