@@ -2,9 +2,6 @@ from datetime import datetime, date
 
 from airflow import DAG
 from airflow.models import Param
-from airflow.operators.empty import EmptyOperator
-from airflow.operators.python import PythonOperator, BranchPythonOperator
-from airflow.providers.common.sql.operators.sql import BranchSQLOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from pendulum import duration
 
@@ -12,7 +9,7 @@ with DAG(
         dag_id="daily_report",
         description="Формирование ежедневных одчетов, остатков, дефектур.",
         schedule="30 23 * * *",
-        start_date=datetime(2023, 1, 1, 13),
+        start_date=datetime(2023, 10, 7, 23),
         catchup=False,
         tags=['report'],
         default_args={
@@ -20,11 +17,12 @@ with DAG(
             "retry_delay": duration(seconds=30),
         },
         params={
-            "report_date": Param(date.today().strftime("%Y-%m-%d"), title="Дата", format="date", type="string", description="Дата формирования отчёта"),
-            "telegram_sender": Param("cosmobeautybotbot", title="Отправитель", type="string", description="Отправитель сообщения в телеграмм"),
+            "report_date": Param(date.today().strftime("%Y-%m-%d"), title="Дата", format="date", type="string",
+                                 description="Дата формирования отчёта"),
+            "telegram_sender": Param("cosmobeautybotbot", title="Отправитель", type="string",
+                                     description="Отправитель сообщения в телеграмм"),
         },
 ) as dag:
-
     daily_stock = PostgresOperator(
         task_id="daily_stock",
         postgres_conn_id="database",
