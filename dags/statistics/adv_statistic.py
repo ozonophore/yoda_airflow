@@ -171,8 +171,8 @@ def prepare_data(type_report, uuid, file_name, owner_code):
 
 with DAG(
         dag_id="adv_statistic",
-        schedule_interval="@daily",
-        start_date=datetime(2023, 10, 12, 1),
+        schedule="30 1 * * *",
+        start_date=datetime(2023, 10, 11, 1),
         max_active_runs=1,
         catchup=False,
         params={
