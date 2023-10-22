@@ -38,7 +38,7 @@ def request_repeater(method, url, **kwargs) -> requests.Response:
 
 @dag(
     start_date=datetime.today(),
-    schedule_interval=NOTSET,
+    schedule_interval="0 1 * * *",
     default_args=default_args,
     max_active_runs=1,
     max_active_tasks=3,
