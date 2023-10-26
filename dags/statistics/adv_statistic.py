@@ -26,6 +26,7 @@ TYPES = ['TRAFFIC_SOURCES', 'ORDERS']
 DEFAULT_ARGS = {
     'off_days': 60,
     'work_dir': 'data/',
+    'retries': 3,
 }
 
 
@@ -151,21 +152,22 @@ def parse_excel_file(file, type):
 def prepare_data(type_report, uuid, file_name, owner_code):
     data = parse_excel_file(file_name, type_report)
     sql_queries = list()
+    if type_report == 'TRAFFIC_SOURCES':
+        sql = "INSERT INTO dl.adv_statistic_traffic(doc_uuid,owner_code,date,source,medium,campaign,content,term,sessions,followers,add_to_basket,add_to_favorites,cancel,session_duration,ordered_qnt,sum_cost,sum_price,range_attr_qnt,range_attr_sum_cost,range_attr_sum_price) VALUES "
+    else:
+        sql = "INSERT INTO dl.adv_statistic_orders(doc_uuid,owner_code,date, id_com_category, category_name, sku, name, seller_id, seller_name, brand_id, brand_name, source, medium, campaign, content, term, ordered_qnt, sum_price, sum_cost, range_attr_qnt, range_attr_sum_price, range_attr_sum_cost) VALUES "
+
     for item in data:
         if type_report == 'TRAFFIC_SOURCES':
-            sql_query = (
-                f"INSERT INTO dl.adv_statistic_traffic(doc_uuid,owner_code,date,source,medium,campaign,content,term,sessions,followers,add_to_basket,add_to_favorites,cancel,session_duration,ordered_qnt,sum_cost,sum_price,range_attr_qnt,range_attr_sum_cost,range_attr_sum_price) "
-                f"VALUES ('{uuid}','{owner_code}', {item});")
+            sql_query = (f"('{uuid}','{owner_code}', {item})")
         else:
-            sql_query = (
-                f"INSERT INTO dl.adv_statistic_orders(doc_uuid,owner_code,date, id_com_category, category_name, sku, name, seller_id, seller_name, brand_id, brand_name, source, medium, campaign, content, term, ordered_qnt, sum_price, sum_cost, range_attr_qnt, range_attr_sum_price, range_attr_sum_cost) "
-                f"VALUES ('{uuid}','{owner_code}',{item});")
+            sql_query = (f"('{uuid}','{owner_code}',{item})")
         sql_queries.append(sql_query)
     pg_hook = PostgresHook(
         postgres_conn_id='database'
     )
     if len(sql_queries) > 0:
-        pg_hook.run(sql_queries)
+        pg_hook.run('{0} {1}'.format(sql, ','.join(sql_query)))
         set_loaded_error_status(None, 'UPLOADED', uuid)
 
 
@@ -175,6 +177,7 @@ with DAG(
         start_date=datetime(2023, 10, 11, 1),
         max_active_runs=1,
         catchup=False,
+        default_args=DEFAULT_ARGS,
         params={
             "report_date": Param((date.today() - timedelta(days=1)).strftime("%Y-%m-%d"), title="Дата", format="date",
                                  type="string",
