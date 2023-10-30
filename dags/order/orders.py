@@ -1,4 +1,5 @@
 import csv
+import json
 import logging
 import os
 import uuid
@@ -24,6 +25,24 @@ default_args = {
 }
 
 
+def request_repeater_large(method, url, **kwargs):
+    attempt = 3
+    while True:
+        with requests.request(method, url, stream=True,  **kwargs) as resp:
+            if resp.status_code != 200 and attempt == 0:
+                resp.raise_for_status()
+            if resp.status_code != 200:
+                attempt -= 1
+                sleep(30)
+                continue
+            path = f'{default_args["work_dir"]}{uuid.uuid4()}.data'
+            with open(path, 'wb') as f:
+                for chunk in resp.iter_content(chunk_size=10 * 1024):
+                    if chunk:  # filter out keep-alive new chunks
+                        f.write(chunk)
+            with open(path, 'r') as f:
+                return json.load(f)
+
 def request_repeater(method, url, **kwargs) -> requests.Response:
     attempt = 3
     while True:
@@ -31,20 +50,21 @@ def request_repeater(method, url, **kwargs) -> requests.Response:
         if resp.status_code == 200:
             return resp
         if attempt == 0:
-            raise Exception(f"Response code: {resp.status_code} message: {resp.text}")
+            resp.raise_for_status()
         logging.info(f"Attemption: {attempt} code: {resp.status_code} message: {resp.text}")
         attempt -= 1
         sleep(30)
 
+
 @dag(
-    start_date=datetime.today(),
+    start_date=datetime(2021, 10, 27),
     schedule_interval="0 1 * * *",
     default_args=default_args,
     max_active_runs=1,
     max_active_tasks=3,
     params={
         "dateTo": Param(today().strftime("%Y-%m-%d"), title="Дата до", format="date",
-                                 type="string", description="Дата до",),
+                        type="string", description="Дата до", ),
     },
     tags=['orders'])
 def orders():
@@ -64,25 +84,39 @@ def orders():
         startdate = dateTo - timedelta(days=offset_days)
         filename = uuid.uuid4()
         csvfile = open(f'{default_args["work_dir"]}{filename}.{owner}.sale.csv', 'w')
+        maxDays = 20
         try:
             while True:
-                resp = request_repeater("GET",f'https://statistics-api.wildberries.ru/api/v1/supplier/sales?dateFrom={startdate}&flag=0',
+                if offset_days > maxDays:
+                    flag = 1
+                else:
+                    flag = 0
+                logging.info("Date from: %s", startdate)
+                resp = request_repeater("GET",
+                                        f'https://statistics-api.wildberries.ru/api/v1/supplier/sales?dateFrom={startdate}&flag={flag}',
                                         headers={"Authorization": f"Bearer {token}"})
                 if len(resp.json()) == 0:
                     break
                 spamwriter = csv.writer(csvfile, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
                 logging.info("Size: %s", len(resp.json()))
                 for row in resp.json():
-                    startdate = max(startdate, datetime.strptime(row['lastChangeDate'], '%Y-%m-%dT%H:%M:%S'))
+                    if offset_days <= maxDays:
+                        startdate = max(startdate, datetime.strptime(row['lastChangeDate'], '%Y-%m-%dT%H:%M:%S'))
                     if datetime.strptime(row['date'], '%Y-%m-%dT%H:%M:%S') < startdate:
                         continue  # skip old data
                     spamwriter.writerow(
                         [row['date'], owner, row['lastChangeDate'], row['warehouseName'], row['countryName'],
                          row['oblastOkrugName'], row['regionName'], row['supplierArticle'], row['barcode'],
-                         row['category'], row['subject'], row['brand'], row['techSize'], row['incomeID'], row['isSupply'],
+                         row['category'], row['subject'], row['brand'], row['techSize'], row['incomeID'],
+                         row['isSupply'],
                          row['isRealization'], row['totalPrice'], row['discountPercent'], row['spp'], row['forPay'],
                          row['finishedPrice'], row['priceWithDisc'], row['saleID'], row['sticker'],
                          row['gNumber'], row['odid'], row['srid'], row['nmId']])
+                if offset_days > maxDays:
+                    offset_days -= 1
+                    startdate = startdate + timedelta(days=1)
+                    if startdate > dateTo:
+                        break
             csvfile.close()
             PostgresHook(
                 postgres_conn_id=default_args["conn_id"]
@@ -117,7 +151,7 @@ def orders():
         for row in resp.json():
             allCount += 1
             if datetime.strptime(row['date'], '%Y-%m-%dT%H:%M:%S') < dateFrom:
-                continue # skip old data
+                continue  # skip old data
             maxDate = max(maxDate, datetime.strptime(row['lastChangeDate'], '%Y-%m-%dT%H:%M:%S'))
             spamwriter.writerow(
                 [row['date'], owner, row['lastChangeDate'], row['supplierArticle'], row['techSize'],
@@ -157,8 +191,9 @@ def orders():
         offset_days = default_args["offset_days"]
         dateFrom = dateTo - timedelta(days=offset_days)
         dateFromStr = dateFrom.strftime('%Y-%m-%d')
-        resp = request_repeater("GET", f"https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={dateFromStr}",
-                            headers={"Authorization": f"Bearer {token}"})
+        resp = request_repeater("GET",
+                                f"https://statistics-api.wildberries.ru/api/v1/supplier/stocks?dateFrom={dateFromStr}",
+                                headers={"Authorization": f"Bearer {token}"})
         items = resp.json()
         if len(items) == 0:
             return None
@@ -170,7 +205,7 @@ def orders():
                     [owner, item['lastChangeDate'], item['warehouseName'], item['supplierArticle'], item['barcode'],
                      item['quantity'], item['inWayToClient'], item['inWayFromClient'], item['quantityFull'],
                      item['category'], item['subject'], item['brand'], item['Price'],
-                     item['Discount'], item['isSupply'], item['isRealization'], item['nmId'] ])
+                     item['Discount'], item['isSupply'], item['isRealization'], item['nmId']])
             csvfile.close()
             PostgresHook(postgres_conn_id=default_args["conn_id"]).copy_expert(
                 'COPY dl.tmp_stock_wb FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')',
@@ -201,35 +236,39 @@ def orders():
         skus = set()
         spamwriter = csv.writer(csvfile, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
         maxDate = datetime.strptime(sinceDate, '%Y-%m-%dT%H:%M:%S.%fZ')
+        dateFrom = sinceDate
         try:
             while True:
                 if offset > 20000:
                     offset = 0
                     sinceDate = (maxDate + timedelta(milliseconds=1)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
                     logging.info("Since date: %s", sinceDate)
-                resp = request_repeater('POST', "https://api-seller.ozon.ru/v2/posting/fbo/list", headers=headers, json={
-                    "dir": "ASC",
-                    "filter": {
-                        "since": sinceDate,
-                        "status": "",
-                        "to": toDate
-                    },
-                    "limit": pageSize,
-                    "offset": offset,
-                    "translit": True,
-                    "with": {
-                        "analytics_data": True,
-                        "financial_data": True
-                    }
-                }
-                                     )
+                resp = request_repeater('POST', "https://api-seller.ozon.ru/v2/posting/fbo/list", headers=headers,
+                                        json={
+                                            "dir": "ASC",
+                                            "filter": {
+                                                "since": sinceDate,
+                                                "status": "",
+                                                "to": toDate
+                                            },
+                                            "limit": pageSize,
+                                            "offset": offset,
+                                            "translit": True,
+                                            "with": {
+                                                "analytics_data": True,
+                                                "financial_data": True
+                                            }
+                                        }
+                                        )
                 items = resp.json()['result']
                 size = len(items)
                 if size == 0:
                     break
                 product_count = 0
                 for item in items:
-                    maxDate = max(maxDate, datetime.strptime(item['created_at'], '%Y-%m-%dT%H:%M:%S.%fZ'))
+                    if datetime.strptime(item['created_at'], '%Y-%m-%dT%H:%M:%S.%fZ') < datetime.strptime(sinceDate, '%Y-%m-%dT%H:%M:%S.%fZ'):
+                        continue
+                    maxDate = max(maxDate, datetime.strptime(item['in_process_at'], '%Y-%m-%dT%H:%M:%S.%fZ'))
                     analytics_data = item['analytics_data']
                     financial_dict = dict()
                     if item['financial_data'] is not None:
@@ -280,13 +319,14 @@ def orders():
         skus = set()
         csvfile = open(f'{default_args["work_dir"]}{uuid.uuid4()}.{owner.lower()}.stock.ozon.csv', 'w')
         while True:
-            resp = request_repeater('POST', "https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses", headers=headers
-                                 , json={
+            resp = request_repeater('POST', "https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses",
+                                    headers=headers
+                                    , json={
                     "warehouse_type": "ALL",
                     "limit": pageSize,
                     "offset": offset
                 }
-                                 )
+                                    )
             items = resp.json()['result']['rows']
             size = len(items)
             logging.info("Size: %s", size)
@@ -411,7 +451,8 @@ def orders():
         if org[3] == 'WB':
             wb_task = start.override(task_id=f"{str(org[0]).lower()}_wb")()
             start_task >> wb_task
-            wb_extract_stock_task = wb_extract_stock.override(task_id=f"{str(org[0]).lower()}_wb_extract_stock")(org[0], org[1])
+            wb_extract_stock_task = wb_extract_stock.override(task_id=f"{str(org[0]).lower()}_wb_extract_stock")(org[0],
+                                                                                                                 org[1])
             wb_extract_orders_task = wb_extract_orders.override(task_id=f"{str(org[0]).lower()}_wb_extract_orders")(
                 org[0], org[1])
             wb_extract_sales_task = wb_extract_sales.override(task_id=f"{str(org[0]).lower()}_wb_extract_sales")(org[0],
