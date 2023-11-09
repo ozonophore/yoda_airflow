@@ -10,6 +10,7 @@ from time import sleep
 import requests
 import urllib3
 from airflow.decorators import task
+from airflow.exceptions import AirflowNotFoundException
 from airflow.models import Param
 from airflow.models.dag import dag
 from airflow.operators.python import get_current_context
@@ -136,7 +137,7 @@ def request_repeater(method, url, **kwargs) -> requests.Response:
 
 
 @dag(
-    start_date=datetime(2023, 11, 7),
+    start_date=datetime(2023, 11, 8),
     schedule_interval="0 1 * * *",
     default_args=default_args,
     max_active_runs=1,
@@ -323,6 +324,8 @@ def orders():
                     days -= 1
                     sleep(10)
             logging.info("Downloaded: %s", count)
+            if count == 0:
+                return AirflowNotFoundException("No data")
             write_statistic("WB", owner, "order", count)
             csvfile.close()
 
