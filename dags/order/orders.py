@@ -54,6 +54,8 @@ def get_statistic(source, owner, type_data) -> int:
     if rec is None:
         return group_days
     count_day = rec[0] / default_args["offset_days"]
+    if count_day == 0:
+        return 5000
     waist_days = int(70000 / count_day)
     if waist_days > default_args["offset_days"]:
         waist_days = default_args["offset_days"]
