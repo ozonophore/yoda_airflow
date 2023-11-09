@@ -255,6 +255,7 @@ def orders():
 
         except Exception as e:
             logging.error(f"Ошибка загрузки: {str(e)}")
+            raise e
         finally:
             if csvfile:
                 csvfile.close()
@@ -327,7 +328,7 @@ def orders():
                     sleep(10)
             logging.info("Downloaded: %s", count)
             if count == 0:
-                return AirflowNotFoundException("No data")
+                raise AirflowNotFoundException("No data")
             write_statistic("WB", owner, "order", count)
             csvfile.close()
 
