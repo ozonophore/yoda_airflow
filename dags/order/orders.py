@@ -56,7 +56,7 @@ def get_statistic(source, owner, type_data) -> int:
     count_day = rec[0] / default_args["offset_days"]
     if count_day == 0:
         return 15
-    waist_days = int(70000 / count_day)
+    waist_days = int(60000 / count_day)
     if waist_days > default_args["offset_days"]:
         waist_days = default_args["offset_days"]
     return waist_days
@@ -359,13 +359,14 @@ def orders():
             return None
         csvfile = open(f'{default_args["work_dir"]}{uuid.uuid4()}.{owner}.stock.wb.csv', 'w')
         try:
+            createAt = datetime.now().strftime('%Y-%m-%d')
             spamwriter = csv.writer(csvfile, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
             for item in items:
                 spamwriter.writerow(
                     [owner, item['lastChangeDate'], item['warehouseName'], item['supplierArticle'], item['barcode'],
                      item['quantity'], item['inWayToClient'], item['inWayFromClient'], item['quantityFull'],
                      item['category'], item['subject'], item['brand'], item['Price'],
-                     item['Discount'], item['isSupply'], item['isRealization'], item['nmId']])
+                     item['Discount'], item['isSupply'], item['isRealization'], item['nmId'], createAt])
             csvfile.close()
             PostgresHook(postgres_conn_id=default_args["conn_id"]).copy_expert(
                 'COPY dl.tmp_stock_wb FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')',
@@ -493,12 +494,13 @@ def orders():
                 size = len(items)
                 logging.info("Size: %s", size)
                 spamwriter = csv.writer(csvfile, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
+                createAt = datetime.now().strftime('%Y-%m-%d')
                 for row in items:
                     skus.add(row['sku'])
                     spamwriter.writerow(
                         [row['sku'], row['item_code'], row['item_name'], row['free_to_sell_amount'],
                          row['promised_amount'],
-                         row['reserved_amount'], row['warehouse_name'], owner]
+                         row['reserved_amount'], row['warehouse_name'], owner, createAt]
                     )
 
                 if size < pageSize:
