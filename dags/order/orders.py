@@ -608,6 +608,8 @@ def orders():
     orgs = PostgresHook(postgres_conn_id="database").get_records(
         "SELECT owner_code, password, client_id, source FROM ml.owner_marketplace t")
     clean_task = clean_and_init()
+    apply_data_task = apply_data()
+    apply_stock_task = apply_stock()
 
     group = dict()
     for org in orgs:
@@ -628,8 +630,8 @@ def orders():
                 org[0], org[1])
             wb_extract_sales_task = wb_extract_sales.override(task_id=f"{str(org[0]).lower()}_wb_extract_sales")(org[0],
                                                                                                                  org[1])
-            wb_task >> wb_extract_stock_task >> apply_stock
-            wb_task >> wb_extract_orders_task >> wb_extract_sales_task >> apply_data
+            wb_task >> wb_extract_stock_task >> apply_stock_task
+            wb_task >> wb_extract_orders_task >> wb_extract_sales_task >> apply_data_task
         else:
             ozon_task = start.override(task_id=f"{str(org[0]).lower()}_ozon")()
             start_task >> ozon_task
@@ -646,8 +648,8 @@ def orders():
                                                                             ozon_extract_orders_task,
                                                                             ozon_extract_stock_task)
 
-            ozon_extract_product_info_task >> apply_data
-            ozon_extract_product_info_task >> apply_stock
+            ozon_extract_product_info_task >> apply_data_task
+            ozon_extract_product_info_task >> apply_stock_task
     # clean_task >> wb_extract_data_task >> wb_transform_data_task
 
 
