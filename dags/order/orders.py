@@ -15,7 +15,7 @@ from airflow.models import Param
 from airflow.models.dag import dag
 from airflow.operators.python import get_current_context
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from dateutil.utils import today
+from pendulum import today
 
 default_args = {
     'retries': 5,
@@ -25,7 +25,7 @@ default_args = {
     'offset_days': 45,
 }
 
-max_retries = 5  # Максимальное количество попыток
+max_retries = 10  # Максимальное количество попыток
 retry_delay = 30  # Задержка в секундах между попытками
 group_days = 20  # Количество дней для группповой загрузки
 
@@ -470,7 +470,7 @@ def orders():
         return skus
 
     @task
-    def ozon_extract_stock(owner, clientId, token) -> None:
+    def ozon_extract_stock(owner, clientId, token) -> set:
         headers = {
             "Client-Id": clientId,
             "Api-Key": token,
@@ -590,6 +590,12 @@ def orders():
         logging.info("Skus: %s", skus)
 
     @task
+    def apply_stock() -> None:
+        stock_date = today().add(days=-1).strftime('%Y-%m-%d')
+        logging.info(f"Apply stock {stock_date}")
+        PostgresHook(postgres_conn_id=default_args["conn_id"]).run(
+            f"call dl.apply_stock(to_date('{stock_date}', 'YYYY-MM-DD'))")
+    @task
     def apply_data() -> None:
         dateToStr = get_current_context()['params']['dateTo']
         dateTo = datetime.strptime(dateToStr, '%Y-%m-%d')
@@ -602,7 +608,6 @@ def orders():
     orgs = PostgresHook(postgres_conn_id="database").get_records(
         "SELECT owner_code, password, client_id, source FROM ml.owner_marketplace t")
     clean_task = clean_and_init()
-    apply_data_task = apply_data()
 
     group = dict()
     for org in orgs:
@@ -623,8 +628,8 @@ def orders():
                 org[0], org[1])
             wb_extract_sales_task = wb_extract_sales.override(task_id=f"{str(org[0]).lower()}_wb_extract_sales")(org[0],
                                                                                                                  org[1])
-            wb_task >> wb_extract_stock_task >> apply_data_task
-            wb_task >> wb_extract_orders_task >> wb_extract_sales_task >> apply_data_task
+            wb_task >> wb_extract_stock_task >> apply_stock
+            wb_task >> wb_extract_orders_task >> wb_extract_sales_task >> apply_data
         else:
             ozon_task = start.override(task_id=f"{str(org[0]).lower()}_ozon")()
             start_task >> ozon_task
@@ -641,7 +646,8 @@ def orders():
                                                                             ozon_extract_orders_task,
                                                                             ozon_extract_stock_task)
 
-            ozon_extract_product_info_task >> apply_data_task
+            ozon_extract_product_info_task >> apply_data
+            ozon_extract_product_info_task >> apply_stock
     # clean_task >> wb_extract_data_task >> wb_transform_data_task
 
 
