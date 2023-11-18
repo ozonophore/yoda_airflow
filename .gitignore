@@ -1,4 +1,4 @@
-.DS_Store
+**/.DS_Store
 .idea
 /.env
 /logs/**
@@ -9,3 +9,5 @@
 __pycache__/
 *.py[cod]
 *$py.class
+
+/dags/test/**
