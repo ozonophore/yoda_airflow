@@ -22,7 +22,7 @@ default_args = {
     'retry_delay': timedelta(seconds=60),
     'work_dir': 'data/',
     'conn_id': 'database',
-    'offset_days': 45,
+    'offset_days': 150,
 }
 
 max_retries = 10  # Максимальное количество попыток
@@ -591,19 +591,21 @@ def orders():
 
     @task
     def apply_stock() -> None:
-        stock_date = today().add(days=-1).strftime('%Y-%m-%d')
-        logging.info(f"Apply stock {stock_date}")
-        PostgresHook(postgres_conn_id=default_args["conn_id"]).run(
-            f"call dl.apply_stock(to_date('{stock_date}', 'YYYY-MM-DD'))")
+        pass
+        # stock_date = today().add(days=-1).strftime('%Y-%m-%d')
+        # logging.info(f"Apply stock {stock_date}")
+        # PostgresHook(postgres_conn_id=default_args["conn_id"]).run(
+        #     f"call dl.apply_stock(to_date('{stock_date}', 'YYYY-MM-DD'))")
     @task
     def apply_data() -> None:
-        dateToStr = get_current_context()['params']['dateTo']
-        dateTo = datetime.strptime(dateToStr, '%Y-%m-%d')
-        offset_days = default_args["offset_days"]
-        dateFrom = (dateTo - timedelta(days=offset_days)).strftime('%Y-%m-%d')
-        logging.info(f"Apply data {dateTo} from {dateFrom}")
-        PostgresHook(postgres_conn_id=default_args["conn_id"]).run(
-            f"call dl.apply_orders(to_date('{dateFrom}', 'YYYY-MM-DD'))")
+        pass
+        # dateToStr = get_current_context()['params']['dateTo']
+        # dateTo = datetime.strptime(dateToStr, '%Y-%m-%d')
+        # offset_days = default_args["offset_days"]
+        # dateFrom = (dateTo - timedelta(days=offset_days)).strftime('%Y-%m-%d')
+        # logging.info(f"Apply data {dateTo} from {dateFrom}")
+        # PostgresHook(postgres_conn_id=default_args["conn_id"]).run(
+        #     f"call dl.apply_orders(to_date('{dateFrom}', 'YYYY-MM-DD'))")
 
     orgs = PostgresHook(postgres_conn_id="database").get_records(
         "SELECT owner_code, password, client_id, source FROM ml.owner_marketplace t")
