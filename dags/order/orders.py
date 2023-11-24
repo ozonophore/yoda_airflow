@@ -226,7 +226,7 @@ def orders():
                         row['category'], row['subject'], row['brand'], row['techSize'], row['incomeID'],
                         row['isSupply'], row['isRealization'], row['totalPrice'], row['discountPercent'],
                         row['spp'], row['forPay'], row['finishedPrice'], row['priceWithDisc'], row['saleID'],
-                        row['sticker'], row['gNumber'], row['odid'], row['srid'], row['nmId']
+                        row['sticker'], row['gNumber'], 0, row['srid'], row['nmId']
                     ])
                 csvfile.flush()
                 current_file_size += get_file_size(csvfile_path)
