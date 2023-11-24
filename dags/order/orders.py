@@ -214,7 +214,7 @@ def orders():
                 logging.info("Количество записей: %s", size)
 
                 for row in resp:
-                    if row['odid'] == 0:
+                    if row['srid'] == 0:
                         continue
                     row_date = datetime.strptime(row['date'], '%Y-%m-%dT%H:%M:%S')
                     if row_date < startdate:
