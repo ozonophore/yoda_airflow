@@ -289,8 +289,8 @@ def orders():
             spamwriter.writerow(
                 [row['date'], owner, row['lastChangeDate'], row['supplierArticle'], row['techSize'],
                  row['barcode'], row['totalPrice'], row['discountPercent'], row['warehouseName'],
-                 row['oblast'], row['incomeID'], row['odid'], row['subject'], row['category'],
-                 row['brand'], row['isCancel'], row['cancel_dt'], row['gNumber'], row['sticker'], row['srid'],
+                 row['regionName'], row['incomeID'], row['odid'], row['subject'], row['category'],
+                 row['brand'], row['isCancel'], row['cancelDate'], row['gNumber'], row['sticker'], row['srid'],
                  row['orderType'], row['nmId']])
             i += 1
         logging.info("Inserted: %s from %s", i, allCount)
