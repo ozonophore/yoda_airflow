@@ -291,7 +291,8 @@ def orders():
                  row['barcode'], row['totalPrice'], row['discountPercent'], row['warehouseName'],
                  row['regionName'], row['incomeID'], 0, row['subject'], row['category'],
                  row['brand'], row['isCancel'], row['cancelDate'], row['gNumber'], row['sticker'], row['srid'],
-                 row['orderType'], row['nmId']])
+                 row['orderType'], row['nmId'], row['spp'], row['finishedPrice'], row['priceWithDisc'],
+                 row['countryName'], row['oblastOkrugName'], row['regionName']])
             i += 1
         logging.info("Inserted: %s from %s", i, allCount)
         return allCount
@@ -335,7 +336,34 @@ def orders():
             PostgresHook(
                 postgres_conn_id=default_args["conn_id"]
             ).copy_expert(
-                'COPY dl.tmp_orders_wb FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')',
+                'COPY dl.tmp_orders_wb(date,
+                'owner_code, ' +
+                'last_change_date, ' +
+                'supplier_article, ' +
+                'tech_size, ' +
+                'barcode, ' +
+                'total_price, ' +
+                'discount_percent, ' +
+                'warehouse_name, ' +
+                'oblast, ' +
+                'income_id, ' +
+                'odid, ' +
+                'subject, ' +
+                'category, ' +
+                'brand, ' +
+                'is_cancel, ' +
+                'cancel_dt, ' +
+                'g_number, ' +
+                'sticker, ' +
+                'srid, ' +
+                'order_type, ' +
+                'nm_id, ' +
+                'spp, ' +
+                'finished_price, ' +
+                'price_with_disc, ' +
+                'country_name, ' +
+                'oblast_okrug_name, ' +
+                'region_name) FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')',
                 f'{csvfile.name}')
         finally:
             os.remove(csvfile.name)
@@ -594,6 +622,7 @@ def orders():
         logging.info(f"Apply stock {stock_date}")
         PostgresHook(postgres_conn_id=default_args["conn_id"]).run(
             f"call dl.apply_stock(to_date('{stock_date}', 'YYYY-MM-DD'))")
+
     @task
     def apply_data() -> None:
         dateToStr = get_current_context()['params']['dateTo']
