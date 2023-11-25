@@ -397,7 +397,7 @@ def orders():
         skus = set()
         spamwriter = csv.writer(csvfile, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
         maxDate = datetime.strptime(sinceDate, '%Y-%m-%dT%H:%M:%S.%fZ')
-        dateFrom = sinceDate
+        startDate = maxDate
         try:
             while True:
                 if offset > 20000:
@@ -427,8 +427,7 @@ def orders():
                     break
                 product_count = 0
                 for item in items:
-                    if datetime.strptime(item['created_at'], '%Y-%m-%dT%H:%M:%S.%fZ') < datetime.strptime(sinceDate,
-                                                                                                          '%Y-%m-%dT%H:%M:%S.%fZ'):
+                    if datetime.strptime(item['created_at'], '%Y-%m-%dT%H:%M:%S.%fZ') < startDate:
                         continue
                     maxDate = max(maxDate, datetime.strptime(item['in_process_at'], '%Y-%m-%dT%H:%M:%S.%fZ'))
                     analytics_data = item['analytics_data']
