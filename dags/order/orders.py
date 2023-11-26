@@ -336,7 +336,7 @@ def orders():
             PostgresHook(
                 postgres_conn_id=default_args["conn_id"]
             ).copy_expert(
-                'COPY dl.tmp_orders_wb(date,
+                'COPY dl.tmp_orders_wb(date, ' +
                 'owner_code, ' +
                 'last_change_date, ' +
                 'supplier_article, ' +
