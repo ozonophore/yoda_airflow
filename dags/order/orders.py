@@ -138,6 +138,18 @@ def request_repeater(method, url, **kwargs) -> requests.Response:
         sleep(30)
 
 
+def refresh_token(clientCode, source) -> dict:
+    r = dict()
+    rec = PostgresHook(postgres_conn_id="database").get_records(
+        "SELECT password, client_id FROM ml.owner_marketplace t where t.client_code = %s and t.source=%s", clientCode,
+        source)
+    if len(rec) == 0:
+        raise AirflowNotFoundException(f"Client code {clientCode} not found")
+    r['password'] = rec[0][0]
+    r['client_id'] = rec[0][1]
+    return r
+
+
 @dag(
     start_date=datetime(2023, 11, 8),
     schedule_interval="0 1 * * *",
@@ -162,7 +174,8 @@ def orders():
         return os.path.getsize(file_path)
 
     @task
-    def wb_extract_sales(owner, token) -> None:
+    def wb_extract_sales(owner) -> None:
+        token = refresh_token(owner, "WB")['password']
         PostgresHook(
             postgres_conn_id=default_args["conn_id"]
         ).run(f"delete from dl.tmp_sale where owner_code = '{owner}';")
@@ -298,7 +311,8 @@ def orders():
         return allCount
 
     @task
-    def wb_extract_orders(owner, token) -> None:
+    def wb_extract_orders(owner) -> None:
+        token = refresh_token(owner, "WB")['password']
         PostgresHook(
             postgres_conn_id=default_args["conn_id"]
         ).run(f"delete from dl.tmp_orders_wb where owner_code = '{owner}';")
@@ -369,7 +383,8 @@ def orders():
             os.remove(csvfile.name)
 
     @task
-    def wb_extract_stock(owner, token) -> None:
+    def wb_extract_stock(owner) -> None:
+        token = refresh_token(owner, "WB")['password']
         dateToStr = get_current_context()['params']['dateTo']
         dateTo = datetime.strptime(dateToStr, '%Y-%m-%d')
         offset_days = default_args["offset_days"]
@@ -652,12 +667,10 @@ def orders():
         if org[3] == 'WB':
             wb_task = start.override(task_id=f"{str(org[0]).lower()}_wb")()
             start_task >> wb_task
-            wb_extract_stock_task = wb_extract_stock.override(task_id=f"{str(org[0]).lower()}_wb_extract_stock")(org[0],
-                                                                                                                 org[1])
+            wb_extract_stock_task = wb_extract_stock.override(task_id=f"{str(org[0]).lower()}_wb_extract_stock")(org[0])
             wb_extract_orders_task = wb_extract_orders.override(task_id=f"{str(org[0]).lower()}_wb_extract_orders")(
-                org[0], org[1])
-            wb_extract_sales_task = wb_extract_sales.override(task_id=f"{str(org[0]).lower()}_wb_extract_sales")(org[0],
-                                                                                                                 org[1])
+                org[0])
+            wb_extract_sales_task = wb_extract_sales.override(task_id=f"{str(org[0]).lower()}_wb_extract_sales")(org[0])
             wb_task >> wb_extract_stock_task >> apply_stock_task
             wb_task >> wb_extract_orders_task >> wb_extract_sales_task >> apply_data_task
         else:

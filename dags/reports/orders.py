@@ -2,7 +2,6 @@ from datetime import date, datetime
 
 from airflow import DAG
 from airflow.models import Param
-from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import BranchPythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.postgres.operators.postgres import PostgresOperator
