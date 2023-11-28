@@ -140,13 +140,12 @@ def request_repeater(method, url, **kwargs) -> requests.Response:
 
 def refresh_token(clientCode, source) -> dict:
     r = dict()
-    rec = PostgresHook(postgres_conn_id="database").get_records(
-        "SELECT password, client_id FROM ml.owner_marketplace t where t.client_code = %s and t.source=%s", clientCode,
-        source)
+    rec = PostgresHook(postgres_conn_id="database").get_first(
+        f"SELECT password, client_id FROM ml.owner_marketplace t where t.client_code = '{clientCode}' and t.source='{source}'")
     if len(rec) == 0:
         raise AirflowNotFoundException(f"Client code {clientCode} not found")
-    r['password'] = rec[0][0]
-    r['client_id'] = rec[0][1]
+    r['password'] = rec[0]
+    r['client_id'] = rec[1]
     return r
 
 
