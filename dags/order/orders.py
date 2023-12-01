@@ -234,7 +234,7 @@ def orders():
                         continue  # skip old data
 
                     spamwriter.writerow([
-                        row['date'], owner, row['lastChangeDate'], row['warehouseName'], row['countryName'],
+                        row['date'], owner, row['lastChangeDate'], str(row['warehouseName']).upper(), row['countryName'],
                         row['oblastOkrugName'], row['regionName'], row['supplierArticle'], row['barcode'],
                         row['category'], row['subject'], row['brand'], row['techSize'], row['incomeID'],
                         row['isSupply'], row['isRealization'], row['totalPrice'], row['discountPercent'],
@@ -301,7 +301,7 @@ def orders():
             maxDate = max(maxDate, datetime.strptime(row['lastChangeDate'], '%Y-%m-%dT%H:%M:%S'))
             spamwriter.writerow(
                 [row['date'], owner, row['lastChangeDate'], row['supplierArticle'], row['techSize'],
-                 row['barcode'], row['totalPrice'], row['discountPercent'], row['warehouseName'],
+                 row['barcode'], row['totalPrice'], row['discountPercent'], str(row['warehouseName']).upper(),
                  row['regionName'], row['incomeID'], 0, row['subject'], row['category'],
                  row['brand'], row['isCancel'], row['cancelDate'], row['gNumber'], row['sticker'], row['srid'],
                  row['orderType'], row['nmId'], row['spp'], row['finishedPrice'], row['priceWithDisc'],
@@ -406,7 +406,7 @@ def orders():
             spamwriter = csv.writer(csvfile, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
             for item in items:
                 spamwriter.writerow(
-                    [owner, item['lastChangeDate'], item['warehouseName'], item['supplierArticle'], item['barcode'],
+                    [owner, item['lastChangeDate'], str(item['warehouseName']).upper(), item['supplierArticle'], item['barcode'],
                      item['quantity'], item['inWayToClient'], item['inWayFromClient'], item['quantityFull'],
                      item['category'], item['subject'], item['brand'], item['Price'],
                      item['Discount'], item['isSupply'], item['isRealization'], item['nmId'], createAt])
@@ -491,7 +491,7 @@ def orders():
                              product['quantity'],
                              product['offer_id'],
                              product['price'], analytics_data['region'], analytics_data['city'],
-                             analytics_data['warehouse_name'],
+                             str(analytics_data['warehouse_name']).upper(),
                              analytics_data['warehouse_id'], fd['commission_amount'], fd['commission_percent'],
                              fd['payout'], fd['product_id'], fd['old_price'], fd['total_discount_value'],
                              fd['total_discount_percent'], fd['client_price']
@@ -542,7 +542,7 @@ def orders():
                     spamwriter.writerow(
                         [row['sku'], row['item_code'], row['item_name'], row['free_to_sell_amount'],
                          row['promised_amount'],
-                         row['reserved_amount'], row['warehouse_name'], owner, createAt]
+                         row['reserved_amount'], str(row['warehouse_name']).upper(), owner, createAt]
                     )
 
                 if size < pageSize:
