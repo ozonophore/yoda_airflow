@@ -506,7 +506,7 @@ def orders():
             PostgresHook(postgres_conn_id=default_args["conn_id"]).copy_expert(
                 'COPY dl.tmp_orders_ozon FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')',
                 f'{csvfile.name}')
-            logging.info("Inserted: %s", product_count)
+            logging.info("Inserted: %d", product_count)
         finally:
             os.remove(csvfile.name)
         return skus
@@ -615,11 +615,20 @@ def orders():
                         sku = item['sku']
                     ei = extra_info[item['id']]
                     spamwriter.writerow(
-                        [owner, item['barcode'], item['created_at'], sku, item['marketing_price'],
+                        [owner,
+                         item['barcode'],
+                         item['created_at'],
+                         sku,
+                         item['marketing_price'],
                          item['min_ozon_price'],
-                         item['min_price'], item['offer_id'], item['old_price'], item['premium_price'],
-                         item['price'], item['name'],
-                         ei['brand'], ei['category']
+                         item['min_price'],
+                         item['offer_id'],
+                         item['old_price'],
+                         item['premium_price'],
+                         item['price'],
+                         item['name'],
+                         ei['brand'],
+                         ei['category']
                          ]
                     )
                 offset += pageSize
