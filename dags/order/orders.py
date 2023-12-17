@@ -441,6 +441,7 @@ def orders():
         spamwriter = csv.writer(csvfile, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
         maxDate = datetime.strptime(sinceDate, '%Y-%m-%dT%H:%M:%S.%fZ')
         startDate = maxDate
+        product_count = 0
         try:
             while True:
                 if offset > 20000:
@@ -468,7 +469,6 @@ def orders():
                 size = len(items)
                 if size == 0:
                     break
-                product_count = 0
                 for item in items:
                     if datetime.strptime(item['created_at'], '%Y-%m-%dT%H:%M:%S.%fZ') < startDate:
                         continue
