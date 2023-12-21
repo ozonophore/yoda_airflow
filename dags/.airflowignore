@@ -1,0 +1,5 @@
+test/test\.py
+httpclient/*
+ozon/*
+wb/*
+common/*

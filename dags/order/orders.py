@@ -156,6 +156,7 @@ def refresh_token(clientCode, source) -> dict:
     default_args=default_args,
     max_active_runs=1,
     max_active_tasks=4,
+    catchup=False,
     params={
         "dateTo": Param(today().strftime("%Y-%m-%d"), title="Дата до", format="date",
                         type="string", description="Дата до", ),
