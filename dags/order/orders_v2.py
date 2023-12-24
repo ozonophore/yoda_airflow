@@ -36,8 +36,8 @@ def get_connection_info(source: str, owner: str) -> (str, str):
 
 @dag(
     dag_id="orders_v2",
-    start_date=datetime(2023, 12, 24),
-    schedule_interval="0 23 * * *",
+    start_date=datetime(2023, 12, 25),
+    schedule="0 23 * * *",
     catchup=False,
     max_active_runs=1,
     max_active_tasks=4,
