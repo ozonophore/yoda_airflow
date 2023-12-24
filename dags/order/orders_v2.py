@@ -499,11 +499,13 @@ def test_dag():
         PostgresHook(
             postgres_conn_id=default_args["conn_id"]
         ).run(
-            "truncate table dl.tmp_sale; truncate table dl.tmp_orders_wb; "
+            "truncate table dl.tmp_sale; "
+            "truncate table dl.tmp_orders_wb; "
             "truncate table dl.tmp_stock_ozon; "
             "truncate table dl.tmp_orders_ozon;"
             " truncate table dl.tmp_product_info_ozon; "
-            "truncate table dl.tmp_stock_wb; truncate table dl.tmp_stock_ozon_stat;")
+            "truncate table dl.tmp_stock_wb; "
+            "truncate table dl.tmp_stock_ozon_stat;")
         dateTo = date.today()
         dateFrom = dateTo - timedelta(days=get_current_context()["params"]["days"])
         workDir = f"data/orders_{dateFrom.strftime('%Y%m%d')}_{dateTo.strftime('%Y%m%d')}"
