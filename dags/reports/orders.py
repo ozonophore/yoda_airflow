@@ -9,7 +9,7 @@ from pendulum import duration
 
 
 def get_last_transaction():
-    sql_stmt = "select max(id) id from ml.transaction where status='COMPLETED'"
+    sql_stmt = "select coalesce(max(id), 0) id from ml.transaction where status='COMPLETED'"
     pg_hook = PostgresHook(
         postgres_conn_id='database'
     )

@@ -48,7 +48,7 @@ def extract_stock(id: int, stockDate: datetime.date, writer, owner: str, skus: d
                      info['name'],
                      info['brand'],
                      info['seller'],
-                     warehouse['name'],
+                     str(warehouse['name']).upper(),
                      warehouse['region'],
                      warehouse.get('id'),
                      stock['quantity'],
