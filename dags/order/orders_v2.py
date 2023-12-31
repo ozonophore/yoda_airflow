@@ -10,7 +10,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 sys.path.append('/opt/airflow')
 
-from dags import ozon, wb
+from dags import ozon, wb, integration
 
 from datetime import datetime, date, timedelta
 
@@ -40,7 +40,7 @@ def get_connection_info(source: str, owner: str) -> (str, str):
     schedule="0 23 * * *",
     catchup=False,
     max_active_runs=1,
-    max_active_tasks=4,
+    max_active_tasks=5,
     tags=['orders'],
     params={"days": Param(45, type="integer", description="Кол-во дней для выгрузки")},
 )
@@ -492,6 +492,38 @@ def test_dag():
 
     #### OZON END ###
 
+    ###  INTEGRATION ###
+
+    @task
+    def onec_stocks_extract(stock_date: date, work_dir: str) -> str:
+        conn = Connection.get_connection_from_secrets(f"integration")
+        file_name = f"{work_dir}/onec_stock_{stock_date.strftime('%Y%m%d')}.data"
+        with open(file_name, "w") as f:
+            writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
+            id = get_current_context()["dag_run"].id
+            integration.extract_stock_data(id=id,
+                                           writer=writer,
+                                           host=conn.host,
+                                           token=conn.password,
+                                           date=stock_date)
+        return file_name
+
+    @task()
+    def onec_stocks_load(file_name: str) -> None:
+        PostgresHook(postgres_conn_id=default_args["conn_id"]).copy_expert(
+            "COPY bl.stock1c(transaction_id," +
+            "stock_date," +
+            "item_id," +
+            "quantity) FROM STDIN WITH (FORMAT CSV, DELIMITER E'\\t', HEADER FALSE, QUOTE E'\\b')",
+            f'{file_name}')
+
+    @task_group()
+    def tg_integration(date_to: datetime, work_dir: str) -> None:
+        file_name = onec_stocks_extract(stock_date=date_to, work_dir=work_dir)
+        onec_stocks_load(file_name=file_name)
+
+    ###  INTEGRATION END ###
+
     @task()
     def init_parameters() -> dict:
         conn = Connection.get_connection_from_secrets(conn_id=default_args["conn_id"])
@@ -571,6 +603,10 @@ def test_dag():
             dateTo=dateTo,
             workDir=workDir
         ) >> [apply_stock_task, apply_data_task]
+
+    ###  INTEGRATION  ###
+
+    tg_integration(date_to=dateTo, work_dir=workDir) >> [apply_stock_task, apply_data_task]
 
 
 test_dag()

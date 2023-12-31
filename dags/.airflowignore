@@ -3,3 +3,4 @@ httpclient/*
 ozon/*
 wb/*
 common/*
+integration/*

@@ -24,6 +24,7 @@ def get(url, params=None, **kwargs) -> Response:
     i = request_iteration
     resp = requests.get(url, params=params, **kwargs)
     while resp.status_code != 200 and i > 0:
+        logging.info(f"Attemption: {i} status_code: {resp.status_code}")
         sleep(request_timeout)
         resp = requests.get(url, params=params, **kwargs)
         i -= 1
