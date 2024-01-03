@@ -560,6 +560,14 @@ def test_dag():
             f"call dl.apply_orders(to_date('{date_from}', 'YYYY-MM-DD'))")
 
     @task
+    def apply_sale(date_from: date) -> None:
+        logging.info(f"Apply sale by {date_from}")
+        PostgresHook(
+            postgres_conn_id=default_args["conn_id"]
+        ).run(
+            f"call dl.apply_sale(to_date('{date_from}', 'YYYY-MM-DD'))")
+
+    @task
     def apply_stock(stock_date: date) -> None:
         logging.info(f"Apply stock {stock_date}")
         PostgresHook(postgres_conn_id=default_args["conn_id"]).run(
@@ -575,6 +583,8 @@ def test_dag():
     workDir = initParams["workDir"]
 
     apply_data_task = apply_data(dateFrom)
+
+    apply_sale_task = apply_sale(dateFrom)
 
     apply_stock_task = apply_stock(stock_date=dateTo)
 
@@ -593,7 +603,7 @@ def test_dag():
             dateTo=dateTo,
             dateFrom=dateFrom,
             workDir=workDir
-        ) >> [apply_stock_task, apply_data_task]
+        ) >> [apply_stock_task, apply_data_task, apply_sale_task]
 
         ###  WB  ###
 
@@ -602,7 +612,7 @@ def test_dag():
             dateFrom=dateFrom,
             dateTo=dateTo,
             workDir=workDir
-        ) >> [apply_stock_task, apply_data_task]
+        ) >> [apply_stock_task, apply_data_task, apply_sale_task]
 
     ###  INTEGRATION  ###
 
