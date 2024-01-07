@@ -19,9 +19,12 @@ def extract_stock(id: int, stockDate: datetime.date, writer, owner: str, skus: d
         },
         "skus": []
     }
+    end = offset
+    logging.info("Skus size: %s", len(listSkus))
     while True:
-        items = listSkus[index:offset]
-        params["skus"] = items
+        logging.info("Index: %s end: %s", index, end)
+        skusPart = listSkus[index:end]
+        params["skus"] = skusPart
         logging.info("Params: %s", params)
         resp = httpclient.post("https://xapi.ozon.ru/seller-stats-api/v1/stock", headers=header, json=params)
         resp.raise_for_status()
@@ -60,4 +63,4 @@ def extract_stock(id: int, stockDate: datetime.date, writer, owner: str, skus: d
         if offset > len(items):
             break
         index += offset
-        offset += offset
+        end += offset
