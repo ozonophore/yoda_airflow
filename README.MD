@@ -15,4 +15,7 @@ docker compose up airflow-init
 docker compose up -d
 ```
 
+## Selenium Grid
+http://localhost:4444/ui#/sessions
+
 The webserver is available at: http://localhost:8080. The default account has the login 'airflow' and the password 'airflow'.

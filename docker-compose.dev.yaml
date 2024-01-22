@@ -321,6 +321,52 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  selenium:
+    image: selenium/standalone-chrome:latest
+    container_name: selenium-hub
+    shm_size: 2gb
+    restart: always
+    environment:
+      - SE_VNC_NO_PASSWORD=1
+    ports:
+#      - "4442:4442"
+#      - "4443:4443"
+      - "4444:4444"
+
+#  selenium:
+#    image: selenium/hub:latest
+#    container_name: selenium-hub
+#    environment:
+#      - SE_VNC_NO_PASSWORD=1
+#    ports:
+#      - "4442:4442"
+#      - "4443:4443"
+#      - "4444:4444"
+#
+#  chrome:
+#    image: selenium/node-chrome:dev
+#    container_name: chrome-node
+#    shm_size: 2gb
+#    depends_on:
+#      - selenium
+#    environment:
+#      - SE_VNC_NO_PASSWORD=1
+#      - SE_EVENT_BUS_HOST=selenium-hub
+#      - SE_EVENT_BUS_PUBLISH_PORT=4442
+#      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
+#  selenium:
+#    container_name: remote_chromedriver
+#    image: seleniarm/standalone-chromium:latest
+#    environment:
+#      - SE_VNC_NO_PASSWORD=1
+#    ports:
+#      - 4444:4444
+#      - - ${AIRFLOW_PROJ_DIR:-.}/downloads:/home/seluser/downloads
+#    restart: always
+#    networks:
+#      - default
+
 volumes:
   postgres-db-volume:
 

@@ -342,6 +342,15 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  selenium:
+    image: selenium/standalone-chrome:latest
+    container_name: selenium-hub
+    shm_size: 2gb
+    restart: always
+    environment:
+      - SE_VNC_NO_PASSWORD=1
+    ports:
+      - "4444:4444"
 #volumes:
 #  postgres-db-volume:
 

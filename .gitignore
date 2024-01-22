@@ -5,6 +5,8 @@
 /data/**
 /data/
 /logs/
+/plugins/
+/downloads/
 
 __pycache__/
 *.py[cod]

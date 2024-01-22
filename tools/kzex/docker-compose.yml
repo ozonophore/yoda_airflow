@@ -1,0 +1,10 @@
+version: "3"
+services:
+  selenium:
+    container_name: remote_chromedriver
+    image: seleniarm/standalone-chromium:latest
+    environment:
+      - SE_VNC_NO_PASSWORD=1
+    ports:
+      - 4444:4444
+    restart: always

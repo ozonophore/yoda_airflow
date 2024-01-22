@@ -10,7 +10,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 sys.path.append('/opt/airflow')
 
-from dags import ozon, wb, integration
+from dags import ozon, wb, integration, kzexp
 
 from datetime import datetime, date, timedelta
 
@@ -40,9 +40,10 @@ def get_connection_info(source: str, owner: str) -> (str, str):
     schedule="0 23 * * *",
     catchup=False,
     max_active_runs=1,
-    max_active_tasks=5,
+    max_active_tasks=3,
     tags=['orders'],
     params={"days": Param(45, type="integer", description="Кол-во дней для выгрузки")},
+    default_args=default_args,
 )
 def test_dag():
     ####  WB  ###
@@ -550,6 +551,53 @@ def test_dag():
         result["dateFrom"] = dateFrom
         return result
 
+    #### KAZAN EXPRESS ####
+    @task()
+    def init_kz(stock_date: date, work_dir: str) -> dict:
+        workDir = f"{work_dir}/kz_{stock_date.strftime('%Y%m%d')}"
+        if os.path.exists(workDir):
+            shutil.rmtree(workDir)
+        os.mkdir(workDir)
+        result = dict()
+        result["work_dir"] = workDir
+        result["stock_date"] = stock_date
+        return result
+
+    @task()
+    def extract_kz_stocks(owner: str, work_dir: str, stock_date: datetime.date) -> str:
+        logging.info("Extract stocks for %s", owner)
+        con = Connection.get_connection_from_secrets(f"KZ_{owner.upper()}")
+        logging.info("Login: %s", con.login)
+        logging.info("Password: %s", con.password)
+        logging.info("Work dir: %s", work_dir)
+        tm_file = f"/opt/airflow/{work_dir}/kz_stock_{owner.lower()}_{stock_date.strftime('%Y%m%d')}.csv"
+        logging.info("Target file: %s", tm_file)
+        kzexp.extract_data(target=tm_file, login=con.login, password=con.password, context=get_current_context())
+        return tm_file
+
+    @task()
+    def transform_kz_stocks(source: str, owner: str, stock_date: datetime.date, work_dir: str) -> None:
+        logging.info("Transform stocks for %s", source)
+        file_name = f"{work_dir}/kz_stock_{owner.lower()}_{stock_date.strftime('%Y%m%d')}.data"
+        id = get_current_context()["dag_run"].id
+        with open(file_name, "w") as f:
+            writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
+            kzexp.transform_data(id=id,
+                                 source=source,
+                                 stock_date=stock_date,
+                                 writer=writer)
+
+    @task_group()
+    def kz_stock_tg(stock_date: datetime.date, workDir: str) -> None:
+        for kz_org in kz_orgs:
+            extract_file = extract_kz_stocks.override(task_id=f"extract_stocks_{kz_org.lower()}")(owner=kz_org,
+                                                                                                  work_dir=workDir,
+                                                                                                 stock_date=stock_date)
+            transform_kz_stocks.override(task_id=f"transform_stocks_{kz_org.lower()}")(source=extract_file,
+                                                                                       owner=kz_org,
+                                                                                      stock_date=stock_date,
+                                                                                      work_dir=workDir)
+
     ### APPLY ORDERS ###
     @task
     def apply_data(date_from: date) -> None:
@@ -617,6 +665,14 @@ def test_dag():
     ###  INTEGRATION  ###
 
     tg_integration(date_to=dateTo, work_dir=workDir) >> [apply_stock_task, apply_data_task]
+
+    ### KAZAN EXPRESS ####
+    kz_orgs = ["DREAMLAB", "LIKATO"]
+    kz_init = init_kz(stock_date=dateTo, work_dir=workDir)
+    kz_stock_date = kz_init["stock_date"]
+    kz_work_dir = kz_init["work_dir"]
+
+    kz_stock_tg(stock_date=kz_stock_date, workDir=kz_work_dir)
 
 
 test_dag()
