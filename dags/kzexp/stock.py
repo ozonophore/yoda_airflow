@@ -19,7 +19,7 @@ def extract_data(target: str, login: str, password: str, context: Context) -> No
     bash_task.execute(context=context)
 
 
-def transform_data(id: int, source: str, writer, stock_date: datetime.date) -> None:
+def transform_data(id: int, source: str, writer, stock_date: datetime.date, owner: str) -> None:
     r"""
     Преобразование данных
     """
@@ -28,6 +28,7 @@ def transform_data(id: int, source: str, writer, stock_date: datetime.date) -> N
         count = 0
         for row in spamreader:
             writer.writerow([
+                owner,
                 stock_date,
                 row.get("Наименование"),
                 row.get("Штрихкод"),
@@ -59,28 +60,32 @@ def load_data(owner: str, fileName: str, con_id: str) -> None:
     """
     PostgresHook(
         postgres_conn_id=con_id
-    ).run(f"delete from dl.tmp_stock_ozon_stat where owner = '{owner}';")
+    ).run(f"delete from dl.tmp_stock_kzexp where owner = '{owner}';")
     logging.info(f"Load data from file: {fileName}")
     PostgresHook(postgres_conn_id=con_id).copy_expert(
         "COPY dl.tmp_stock_kzexp(" +
         "owner, " +
-        "date, " +
-        "sku, " +
-        "method, " +
-        "category, " +
-        "currency, " +
-        "base_price, " +
-        "discount_price, " +
-        "premium_price, " +
-        "ozon_card_price, " +
+        "stock_date, " +
         "name, " +
-        "brand, " +
-        "seller, " +
-        "warehouse, " +
-        "warehouse_region, " +
-        "warehouse_id, " +
-        "quantity, " +
-        "transaction_id, " +
-        "barcode) FROM STDIN WITH (FORMAT CSV, DELIMITER E'\\t', HEADER FALSE, QUOTE E'\\b')",
+        "barcode, " +
+        "sku, " +
+        "org, " +
+        "item_id, " +
+        "qnt_to_send, " +
+        "qnt_in_sale, " +
+        "qnt_to_return, " +
+        "qnt_defective, " +
+        "cost, " +
+        "price, " +
+        "qnt, " +
+        "cost_total, " +
+        "price_total, " +
+        "price_sale, " +
+        "qnt_sdh, " +
+        "qnt_foto, " +
+        "price_sdh, " +
+        "qnt_available_to_send," +
+        "transaction_id" +
+        ") FROM STDIN WITH (FORMAT CSV, DELIMITER E'\\t', HEADER FALSE, QUOTE E'\\b')",
         f'{fileName}')
 

@@ -16,7 +16,6 @@ from datetime import datetime, date, timedelta
 
 from airflow.decorators import dag, task, task_group
 
-
 default_args = {
     'retries': 5,
     'retry_delay': timedelta(seconds=60),
@@ -576,7 +575,7 @@ def test_dag():
         return tm_file
 
     @task()
-    def transform_kz_stocks(source: str, owner: str, stock_date: datetime.date, work_dir: str) -> None:
+    def transform_kz_stocks(source: str, owner: str, stock_date: datetime.date, work_dir: str) -> str:
         logging.info("Transform stocks for %s", source)
         file_name = f"{work_dir}/kz_stock_{owner.lower()}_{stock_date.strftime('%Y%m%d')}.data"
         id = get_current_context()["dag_run"].id
@@ -585,18 +584,26 @@ def test_dag():
             kzexp.transform_data(id=id,
                                  source=source,
                                  stock_date=stock_date,
-                                 writer=writer)
+                                 writer=writer,
+                                 owner=owner
+                                 )
+        return file_name
+
+    @task()
+    def kz_stocks_load(file_name: str, owner: str) -> None:
+        kzexp.load_data(fileName=file_name, owner=owner, con_id=default_args["conn_id"])
 
     @task_group()
     def kz_stock_tg(stock_date: datetime.date, workDir: str) -> None:
         for kz_org in kz_orgs:
             extract_file = extract_kz_stocks.override(task_id=f"extract_stocks_{kz_org.lower()}")(owner=kz_org,
                                                                                                   work_dir=workDir,
-                                                                                                 stock_date=stock_date)
-            transform_kz_stocks.override(task_id=f"transform_stocks_{kz_org.lower()}")(source=extract_file,
-                                                                                       owner=kz_org,
-                                                                                      stock_date=stock_date,
-                                                                                      work_dir=workDir)
+                                                                                                  stock_date=stock_date)
+            data_file = transform_kz_stocks.override(task_id=f"transform_stocks_{kz_org.lower()}")(source=extract_file,
+                                                                                                   owner=kz_org,
+                                                                                                   stock_date=stock_date,
+                                                                                                   work_dir=workDir)
+            kz_stocks_load.override(task_id=f"load_stocks_{kz_org.lower()}")(file_name=data_file, owner=kz_org)
 
     ### APPLY ORDERS ###
     @task
