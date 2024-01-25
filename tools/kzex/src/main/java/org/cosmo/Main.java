@@ -35,8 +35,8 @@ public class Main {
         String password = args[3];
         String targetFile = args[4];
 
-        Configuration.headless = false;
-        Configuration.remote = remoteUrl;//"http://localhost:4444/wd/hub";
+        Configuration.headless = true;
+        //Configuration.remote = remoteUrl;//"http://localhost:4444/wd/hub";
         Configuration.browser = "chrome";
         LOGGER.info("Open main page");
         open("https://business.kazanexpress.ru/seller/signin");
@@ -59,7 +59,9 @@ public class Main {
         LOGGER.info("Click select all button");
         $(byText("Выбрать все")).shouldBe(Condition.visible, Duration.ofMillis(10000)).click();
         LOGGER.info("Click create report button");
+        //$("body").click();
         $(byText("Отчет")).click();
+        sleep(3000);
         LOGGER.info("Click csv button");
         $(byText("CSV")).shouldBe(Condition.visible, Duration.ofMillis(10000)).click();
         LOGGER.info("Click create report button");

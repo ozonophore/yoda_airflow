@@ -18,8 +18,16 @@ USER root
 
 # Установка OpenJDK
 RUN apt-get update && \
-    apt-get install -y openjdk-17-jdk && \
-    apt-get clean && \
+    apt-get install -y openjdk-17-jdk
+
+RUN apt-get install -y wget gnupg
+RUN apt-get install -y libappindicator1 fonts-liberation
+RUN wget -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+#RUN apt install -y gdebi-core
+RUN apt-get install /tmp/chrome.deb -y
+RUN apt-get install -f -y
+
+RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 RUN mkdir /opt/airflow/tools && chown -R airflow /opt/airflow/tools
