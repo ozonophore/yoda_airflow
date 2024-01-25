@@ -36,7 +36,7 @@ public class Main {
         String targetFile = args[4];
 
         Configuration.headless = true;
-        //Configuration.remote = remoteUrl;//"http://localhost:4444/wd/hub";
+        Configuration.remote = remoteUrl;
         Configuration.browser = "chrome";
         LOGGER.info("Open main page");
         open("https://business.kazanexpress.ru/seller/signin");
