@@ -628,6 +628,12 @@ def test_dag():
         PostgresHook(postgres_conn_id=default_args["conn_id"]).run(
             f"call dl.apply_stock(to_date('{stock_date}', 'YYYY-MM-DD'))")
 
+    @task
+    def apply_stock_kz(stock_date: date) -> None:
+        logging.info(f"Apply stock kz {stock_date}")
+        PostgresHook(postgres_conn_id=default_args["conn_id"]).run(
+            f"call dl.apply_stock_kz(to_date('{stock_date}', 'YYYY-MM-DD'))")
+
     #######################
     orgs = PostgresHook(postgres_conn_id=default_args["conn_id"]).get_records(
         "SELECT code FROM ml.owner WHERE is_deleted is false")
@@ -642,6 +648,8 @@ def test_dag():
     apply_sale_task = apply_sale(dateFrom)
 
     apply_stock_task = apply_stock(stock_date=dateTo)
+
+    apply_stock_kz_task = apply_stock_kz(stock_date=dateTo)
 
     for org in orgs:
         owner = org[0]
@@ -679,7 +687,9 @@ def test_dag():
     kz_stock_date = kz_init["stock_date"]
     kz_work_dir = kz_init["work_dir"]
 
-    kz_stock_tg(stock_date=kz_stock_date, workDir=kz_work_dir)
+    kz_loaded = kz_stock_tg(stock_date=kz_stock_date, workDir=kz_work_dir)
+
+    [kz_loaded, apply_stock_task] >> apply_stock_kz_task
 
 
 test_dag()
