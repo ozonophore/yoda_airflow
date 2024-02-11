@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 
+import importlib_resources
 from airflow.models import Param, Connection
 from airflow.operators.python import get_current_context
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -594,7 +595,7 @@ def test_dag():
         kzexp.load_data(fileName=file_name, owner=owner, con_id=default_args["conn_id"])
 
     @task_group()
-    def kz_stock_tg(stock_date: datetime.date, workDir: str) -> None:
+    def kz_stock_tg(stock_date: datetime.date, workDir: str, kz_orgs: str) -> None:
         for kz_org in kz_orgs:
             extract_file = extract_kz_stocks.override(task_id=f"extract_stocks_{kz_org.lower()}")(owner=kz_org,
                                                                                                   work_dir=workDir,
@@ -635,13 +636,16 @@ def test_dag():
             f"call dl.apply_stock_kz(to_date('{stock_date}', 'YYYY-MM-DD'))")
 
     #######################
-    orgs = PostgresHook(postgres_conn_id=default_args["conn_id"]).get_records(
-        "SELECT code FROM ml.owner WHERE is_deleted is false")
 
     initParams = init_parameters()
     dateTo = initParams["dateTo"]
     dateFrom = initParams["dateFrom"]
     workDir = initParams["workDir"]
+
+    kz_init = init_kz(stock_date=dateTo, work_dir=workDir)
+    kz_stock_date = kz_init["stock_date"]
+    kz_work_dir = kz_init["work_dir"]
+    kz_orgs = []
 
     apply_data_task = apply_data(dateFrom)
 
@@ -651,45 +655,45 @@ def test_dag():
 
     apply_stock_kz_task = apply_stock_kz(stock_date=dateTo)
 
-    for org in orgs:
-        owner = org[0]
-        try:
-            Connection.get_connection_from_secrets(f"OZON_{owner.upper()}")
-        except Exception as e:
-            logging.error(f"Error connection for owner: {owner}, msg: {e}")
-            continue
+    sql_path = importlib_resources.files(__name__).joinpath("sql/select_orgs.sql")
+    with open(sql_path, "r") as file:
+        sql_query = file.read()
+        orgs = PostgresHook(postgres_conn_id=default_args["conn_id"]).get_records(sql_query)
+        for org in orgs:
+            source = org[0]
+            owner = org[1]
+            try:
+                Connection.get_connection_from_secrets(f"OZON_{owner.upper()}")
+            except Exception as e:
+                logging.error(f"Error connection for owner: {owner}, msg: {e}")
+                continue
 
-        ### OZON ###
+            ### OZON ###
+            if source == "OZON":
+                ozon_tg.override(group_id=f"{source}_{owner}".lower())(
+                    owner=owner,
+                    dateTo=dateTo,
+                    dateFrom=dateFrom,
+                    workDir=workDir
+                ) >> [apply_stock_task, apply_data_task, apply_sale_task]
+            elif source == "WB":
+                ###  WB  ###
+                wb_tg.override(group_id=f"{source}_{owner}".lower())(
+                    owner=owner,
+                    dateFrom=dateFrom,
+                    dateTo=dateTo,
+                    workDir=workDir
+                ) >> [apply_stock_task, apply_data_task, apply_sale_task]
+            elif source == "KZEXP":
+                kz_orgs.append(owner)
 
-        ozon_tg.override(group_id=f"ozon_{owner.lower()}")(
-            owner=owner,
-            dateTo=dateTo,
-            dateFrom=dateFrom,
-            workDir=workDir
-        ) >> [apply_stock_task, apply_data_task, apply_sale_task]
+    kz_loaded = kz_stock_tg(stock_date=kz_stock_date, workDir=kz_work_dir, kz_orgs=kz_orgs)
 
-        ###  WB  ###
-
-        wb_tg.override(group_id=f"wb_{owner.lower()}")(
-            owner=owner,
-            dateFrom=dateFrom,
-            dateTo=dateTo,
-            workDir=workDir
-        ) >> [apply_stock_task, apply_data_task, apply_sale_task]
+    [kz_loaded, apply_stock_task] >> apply_stock_kz_task
 
     ###  INTEGRATION  ###
 
     tg_integration(date_to=dateTo, work_dir=workDir) >> [apply_stock_task, apply_data_task]
-
-    ### KAZAN EXPRESS ####
-    kz_orgs = ["DREAMLAB", "LIKATO"]
-    kz_init = init_kz(stock_date=dateTo, work_dir=workDir)
-    kz_stock_date = kz_init["stock_date"]
-    kz_work_dir = kz_init["work_dir"]
-
-    kz_loaded = kz_stock_tg(stock_date=kz_stock_date, workDir=kz_work_dir)
-
-    [kz_loaded, apply_stock_task] >> apply_stock_kz_task
 
 
 test_dag()
