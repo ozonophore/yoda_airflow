@@ -1,4 +1,5 @@
 import csv
+import logging
 import os
 import shutil
 import sys
@@ -14,19 +15,18 @@ sys.path.append('/opt/airflow')
 
 from dags import integration
 
-
 default_args = {
     'retries': 5,
     'retry_delay': timedelta(seconds=60),
     'work_dir': 'data/',
     'conn_id': 'database',
-    'offset_days': 45,
 }
+
 
 @dag(
     dag_id="dictionary",
-    start_date=datetime(2024, 1, 10),
-    schedule=None,
+    start_date=datetime(2024, 3, 18),
+    schedule='@daily',
     max_active_runs=1,
     tags=['dictionary'],
     catchup=False,
@@ -35,7 +35,7 @@ default_args = {
         "retry_delay": 30,
     },
 )
-def dictionary() -> None:
+def dictionary():
     r"""
     Загрузка справочников
     """
@@ -46,6 +46,7 @@ def dictionary() -> None:
         Загрузка справочника штрихкодов
         """
         conn = Connection.get_connection_from_secrets(f"integration")
+        logging.info(f"connection: {conn.host}")
         file_name = f"{work_dir}/onec_barcodes.data"
         with open(file_name, "w") as f:
             writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
@@ -58,39 +59,20 @@ def dictionary() -> None:
 
     @task()
     def load_onec_barcodes(fileName: str) -> None:
-        PostgresHook(
+        hook = PostgresHook(
             postgres_conn_id=default_args["conn_id"]
-        ).copy_expert(
-            'COPY dl.tmp_orders_wb(date, ' +
-            'owner_code, ' +
-            'last_change_date, ' +
-            'supplier_article, ' +
-            'tech_size, ' +
+        )
+        hook.run('truncate table dl.tmp_barcode')
+        hook.copy_expert(
+            'COPY dl.tmp_barcode(item_id, ' +
+            'barcode_id, ' +
             'barcode, ' +
-            'total_price, ' +
-            'discount_percent, ' +
-            'warehouse_name, ' +
-            'oblast, ' +
-            'income_id, ' +
-            'odid, ' +
-            'subject, ' +
-            'category, ' +
-            'brand, ' +
-            'is_cancel, ' +
-            'cancel_dt, ' +
-            'g_number, ' +
-            'sticker, ' +
-            'srid, ' +
-            'order_type, ' +
-            'nm_id, ' +
-            'spp, ' +
-            'finished_price, ' +
-            'price_with_disc, ' +
-            'country_name, ' +
-            'oblast_okrug_name, ' +
-            'region_name, '
+            'organisation_id, ' +
+            'marketplace_id, ' +
+            'article, ' +
             'transaction_id) FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')',
             f'{fileName}')
+
 
     @task
     def onec_items_extract(work_dir: str) -> str:
@@ -110,43 +92,24 @@ def dictionary() -> None:
 
     @task()
     def load_onec_items(fileName: str) -> None:
-        PostgresHook(
+        pgHook = PostgresHook(
             postgres_conn_id=default_args["conn_id"]
-        ).copy_expert(
-            'COPY dl.tmp_orders_wb(date, ' +
-            'owner_code, ' +
-            'last_change_date, ' +
-            'supplier_article, ' +
-            'tech_size, ' +
-            'barcode, ' +
-            'total_price, ' +
-            'discount_percent, ' +
-            'warehouse_name, ' +
-            'oblast, ' +
-            'income_id, ' +
-            'odid, ' +
-            'subject, ' +
-            'category, ' +
-            'brand, ' +
-            'is_cancel, ' +
-            'cancel_dt, ' +
-            'g_number, ' +
-            'sticker, ' +
-            'srid, ' +
-            'order_type, ' +
-            'nm_id, ' +
-            'spp, ' +
-            'finished_price, ' +
-            'price_with_disc, ' +
-            'country_name, ' +
-            'oblast_okrug_name, ' +
-            'region_name, '
+        )
+        pgHook.run('truncate table dl.tmp_item')
+        pgHook.copy_expert(
+            'COPY dl.tmp_item(id, ' +
+            'name, ' +
+            'update_at, ' +
             'transaction_id) FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')',
             f'{fileName}')
 
     @task()
     def apply_dictionary() -> None:
-        pass
+        logging.info(f"Apply data id: {get_current_context()['dag_run'].id}")
+        PostgresHook(
+            postgres_conn_id=default_args["conn_id"]
+        ).run(
+            f"call dl.apply_dictionary()")
 
     @task()
     def init_parameters() -> dict:
@@ -162,9 +125,8 @@ def dictionary() -> None:
     init_params = init_parameters()
     work_dir = init_params["workDir"]
 
-    onec_barcodes_extract_task = onec_barcodes_extract(work_dir=work_dir)
-    onec_items_extract_task = onec_items_extract(work_dir=work_dir)
+    [load_onec_barcodes(onec_barcodes_extract(work_dir=work_dir)),
+    load_onec_items(onec_items_extract(work_dir=work_dir))] >> apply_dictionary()
 
-    [load_onec_barcodes(onec_barcodes_extract_task), load_onec_items(onec_items_extract_task)] >> apply_dictionary()
 
 dictionary()

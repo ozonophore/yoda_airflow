@@ -22,7 +22,6 @@ def extract_items(id: int, writer, host: str, token: str) -> None:
         writer.writerow([
             item["id"],
             item["name"],
-            item["article"],
             item["updateAt"],
             id
         ])

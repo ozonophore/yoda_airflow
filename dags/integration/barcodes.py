@@ -25,7 +25,7 @@ def extract_barcodes(id: int, writer, host: str, token: str) -> None:
             item["barcode"],
             item["orgId"],
             item["marketId"],
-            item["article"],
+            item["article"].replace('"','').strip(),
             id
         ])
         index += 1
