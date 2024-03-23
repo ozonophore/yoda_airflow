@@ -689,7 +689,7 @@ def test_dag():
 
     kz_loaded = kz_stock_tg(stock_date=kz_stock_date, workDir=kz_work_dir, kz_orgs=kz_orgs)
 
-    [kz_loaded, apply_stock_task] >> apply_stock_kz_task
+    apply_stock_task >> kz_loaded >> apply_stock_kz_task
 
     ###  INTEGRATION  ###
 
