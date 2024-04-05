@@ -35,8 +35,8 @@ public class Main {
         String password = args[3];
         String targetFile = args[4];
 
-        //Configuration.headless = true;
-        //Configuration.remote = remoteUrl;
+        Configuration.headless = true;
+        Configuration.remote = remoteUrl;
         Configuration.browser = "chrome";
         LOGGER.info("Open main page");
         open("https://business.kazanexpress.ru/seller/signin");
