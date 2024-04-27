@@ -19,6 +19,10 @@ def extract_barcodes(id: int, writer, host: str, token: str) -> None:
         return None
     index = 0
     for item in items:
+        if item["barcodeID"] == "00000000-0000-0000-0000-000000000000":
+            continue
+        value = item.get("RRC")
+        rrc = 0 if value is None or value.strip() == "" else float(value)
         writer.writerow([
             item["id"],
             item["barcodeID"],
@@ -26,6 +30,7 @@ def extract_barcodes(id: int, writer, host: str, token: str) -> None:
             item["orgId"],
             item["marketId"],
             item["article"].replace('"','').strip(),
+            rrc,
             id
         ])
         index += 1

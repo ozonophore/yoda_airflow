@@ -70,6 +70,7 @@ def dictionary():
             'organisation_id, ' +
             'marketplace_id, ' +
             'article, ' +
+            'rrc, ' +
             'transaction_id) FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')',
             f'{fileName}')
 
