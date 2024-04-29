@@ -5,6 +5,7 @@ import psycopg2
 
 from dags import httpclient
 
+header = ["id", "name", "rrc", "distr", "net", "barcode", "date_update"]
 
 def extract_barcode_prices(id: int, writer, host: str, token: str) -> None:
     r"""
@@ -22,6 +23,8 @@ def extract_barcode_prices(id: int, writer, host: str, token: str) -> None:
         logging.info(f"Data is empty, skipping")
         return None
     exists_barcodes = set()
+    writer.writerow(header)
+    logging.info(f"Start processing {size} items")
     for item in items:
         name = item["Номенклатура"]
         if name.lower().find("устарел") != -1 or name.lower().find("не использовать") != -1:
@@ -60,7 +63,7 @@ def load_barcode_prices(fileName: str, database, user, password, host, port: str
                 "net," +
                 "barcode," +
                 "date_update) " +
-                "FROM STDIN WITH (FORMAT CSV, DELIMITER E'\\t', HEADER FALSE, QUOTE '\"')",
+                "FROM STDIN WITH (FORMAT CSV, DELIMITER E'\\t', HEADER TRUE, QUOTE '\"')",
                 f)
         conn.commit()
     finally:

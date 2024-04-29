@@ -11,7 +11,7 @@ from airflow.operators.python import get_current_context
 
 sys.path.append('/opt/airflow')
 
-from dags.price.price import extract_prices, load_price
+from dags.price.price import extract_prices, load_price, transform_prices
 
 default_args = {
     'retries': 5,
@@ -41,9 +41,7 @@ def prices():
             os.makedirs(work_dir)
         file = f"{work_dir}/data_{id}.data"
         conn = Connection.get_connection_from_secrets(default_args["price_conn_id"])
-        with open(file, 'w') as f:
-            writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
-            extract_prices(id=id, writer=writer, token=conn.password)
+        extract_prices(id=id, file_name=file, token=conn.password)
         return file
 
     @task
@@ -58,6 +56,17 @@ def prices():
         logging.info(f"connection: {host} schema: {schema}")
         load_price(id, file, database=schema, user=user, password=password, host=host, port=port)
 
-    load_data(extract_data())
+    @task
+    def transform_data(file: str) -> str:
+        conn = Connection.get_connection_from_secrets(default_args["conn_id"])
+        host = conn.host
+        user = conn.login
+        password = conn.password
+        port = conn.port
+        schema = conn.schema
+        logging.info(f"connection: {host} schema: {schema}")
+        return transform_prices(file_name=file, database=schema, user=user, password=password, host=host, port=port)
+
+    load_data(transform_data(extract_data()))
 
 prices()
