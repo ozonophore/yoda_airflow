@@ -9,12 +9,12 @@ from dags import httpclient
 
 header = ["transaction_id", "client_code", "name", "articul", "category_name", "brand_name", "default_price", "company_id",
           "company_name", "region_name", "price", "in_stock", "discount_type", "discount", "offer_name", "date",
-          "last_check_date", "original_price", "date_create"]
+          "last_check_date", "original_price", "date_create", "card_price"]
 
 header_dl = ["transaction_id", "client_code", "name", "articul", "category_name", "brand_name", "default_price", "company_id",
              "company_name", "region_name", "price", "in_stock", "discount_type", "discount", "offer_name", "offer_id",
              "date",
-             "last_check_date", "original_price", "date_create"]
+             "last_check_date", "original_price", "date_create", "card_price"]
 
 
 class Product:
@@ -97,7 +97,7 @@ def __load_offers(database, user, password, host, port: str):
 
 def write(writer, id, client_code, name, articul, category_name, brand_name, default_price, company_id, company_name,
           region_name, price, in_stock, discount_type, discount, offer_name, date, last_check_date, original_price,
-          date_create):
+          date_create, card_price=None):
     writer.writerow([
         id,
         client_code,
@@ -117,7 +117,8 @@ def write(writer, id, client_code, name, articul, category_name, brand_name, def
         date,
         last_check_date,
         original_price,
-        date_create
+        date_create,
+        card_price
     ])
 
 
@@ -154,8 +155,8 @@ def load_price(id: int, fileName: str, database, user, password, host, port: str
                 "offer_id," +
                 "date," +
                 "last_check_date," +
-                "original_price,"
-                "date_create) " +
+                "original_price," +
+                "date_create, card_price) " +
                 "FROM STDIN WITH (FORMAT CSV, DELIMITER E'\\t', HEADER TRUE, QUOTE E'\\b')",
                 f)
         conn.commit()
@@ -239,11 +240,20 @@ def extract_prices(id: int, file_name, token: str) -> None:
                             #     product_id = products_map.get(product)
                             #     continue
                             # product_id = -1
+                            data = offer.get("data")
+                            card_price: int = None
+                            if data:
+                                # Находим массив объектов с ключем "card_price"
+                                card_price_objects = [item for item in data if item.get("key") == "card_price"]
+
+                                # Если найден объект с ключем "card_price", извлекаем поле "value"
+                                if card_price_objects:
+                                    card_price = card_price_objects[0]["value"]
                             index += 1
                             write(writer, id, client_code, name, articul, category_name, brand_name, default_price,
                                   company_id, company_name, region_name, price, in_stock, discount_type, discount,
                                   offer_name,
-                                  date, last_check_date, original_price, date_create)
+                                  date, last_check_date, original_price, date_create, card_price)
                     else:
                         price = source.get("price")
                         if price is None:
