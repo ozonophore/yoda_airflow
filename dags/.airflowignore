@@ -4,3 +4,5 @@ ozon/*
 wb/*
 common/*
 integration/*
+order/orders.py
+reports/*
