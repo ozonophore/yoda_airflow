@@ -552,59 +552,59 @@ def test_dag():
         return result
 
     #### KAZAN EXPRESS ####
-    @task()
-    def init_kz(stock_date: date, work_dir: str) -> dict:
-        workDir = f"{work_dir}/kz_{stock_date.strftime('%Y%m%d')}"
-        if os.path.exists(workDir):
-            shutil.rmtree(workDir)
-        os.mkdir(workDir)
-        result = dict()
-        result["work_dir"] = workDir
-        result["stock_date"] = stock_date
-        return result
+    # @task()
+    # def init_kz(stock_date: date, work_dir: str) -> dict:
+    #     workDir = f"{work_dir}/kz_{stock_date.strftime('%Y%m%d')}"
+    #     if os.path.exists(workDir):
+    #         shutil.rmtree(workDir)
+    #     os.mkdir(workDir)
+    #     result = dict()
+    #     result["work_dir"] = workDir
+    #     result["stock_date"] = stock_date
+    #     return result
 
-    @task()
-    def extract_kz_stocks(owner: str, work_dir: str, stock_date: datetime.date) -> str:
-        logging.info("Extract stocks for %s", owner)
-        con = Connection.get_connection_from_secrets(f"KZ_{owner.upper()}")
-        logging.info("Login: %s", con.login)
-        logging.info("Password: %s", con.password)
-        logging.info("Work dir: %s", work_dir)
-        tm_file = f"/opt/airflow/{work_dir}/kz_stock_{owner.lower()}_{stock_date.strftime('%Y%m%d')}.csv"
-        logging.info("Target file: %s", tm_file)
-        kzexp.extract_data(target=tm_file, login=con.login, password=con.password, context=get_current_context())
-        return tm_file
+    # @task()
+    # def extract_kz_stocks(owner: str, work_dir: str, stock_date: datetime.date) -> str:
+    #     logging.info("Extract stocks for %s", owner)
+    #     con = Connection.get_connection_from_secrets(f"KZ_{owner.upper()}")
+    #     logging.info("Login: %s", con.login)
+    #     logging.info("Password: %s", con.password)
+    #     logging.info("Work dir: %s", work_dir)
+    #     tm_file = f"/opt/airflow/{work_dir}/kz_stock_{owner.lower()}_{stock_date.strftime('%Y%m%d')}.csv"
+    #     logging.info("Target file: %s", tm_file)
+    #     kzexp.extract_data(target=tm_file, login=con.login, password=con.password, context=get_current_context())
+    #     return tm_file
 
-    @task()
-    def transform_kz_stocks(source: str, owner: str, stock_date: datetime.date, work_dir: str) -> str:
-        logging.info("Transform stocks for %s", source)
-        file_name = f"{work_dir}/kz_stock_{owner.lower()}_{stock_date.strftime('%Y%m%d')}.data"
-        id = get_current_context()["dag_run"].id
-        with open(file_name, "w") as f:
-            writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
-            kzexp.transform_data(id=id,
-                                 source=source,
-                                 stock_date=stock_date,
-                                 writer=writer,
-                                 owner=owner
-                                 )
-        return file_name
+    # @task()
+    # def transform_kz_stocks(source: str, owner: str, stock_date: datetime.date, work_dir: str) -> str:
+    #     logging.info("Transform stocks for %s", source)
+    #     file_name = f"{work_dir}/kz_stock_{owner.lower()}_{stock_date.strftime('%Y%m%d')}.data"
+    #     id = get_current_context()["dag_run"].id
+    #     with open(file_name, "w") as f:
+    #         writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
+    #         kzexp.transform_data(id=id,
+    #                              source=source,
+    #                              stock_date=stock_date,
+    #                              writer=writer,
+    #                              owner=owner
+    #                              )
+    #     return file_name
 
-    @task()
-    def kz_stocks_load(file_name: str, owner: str) -> None:
-        kzexp.load_data(fileName=file_name, owner=owner, con_id=default_args["conn_id"])
-
-    @task_group()
-    def kz_stock_tg(stock_date: datetime.date, workDir: str, kz_orgs: str) -> None:
-        for kz_org in kz_orgs:
-            extract_file = extract_kz_stocks.override(task_id=f"extract_stocks_{kz_org.lower()}")(owner=kz_org,
-                                                                                                  work_dir=workDir,
-                                                                                                  stock_date=stock_date)
-            data_file = transform_kz_stocks.override(task_id=f"transform_stocks_{kz_org.lower()}")(source=extract_file,
-                                                                                                   owner=kz_org,
-                                                                                                   stock_date=stock_date,
-                                                                                                   work_dir=workDir)
-            kz_stocks_load.override(task_id=f"load_stocks_{kz_org.lower()}")(file_name=data_file, owner=kz_org)
+    # @task()
+    # def kz_stocks_load(file_name: str, owner: str) -> None:
+    #     kzexp.load_data(fileName=file_name, owner=owner, con_id=default_args["conn_id"])
+    #
+    # @task_group()
+    # def kz_stock_tg(stock_date: datetime.date, workDir: str, kz_orgs: str) -> None:
+    #     for kz_org in kz_orgs:
+    #         extract_file = extract_kz_stocks.override(task_id=f"extract_stocks_{kz_org.lower()}")(owner=kz_org,
+    #                                                                                               work_dir=workDir,
+    #                                                                                               stock_date=stock_date)
+    #         data_file = transform_kz_stocks.override(task_id=f"transform_stocks_{kz_org.lower()}")(source=extract_file,
+    #                                                                                                owner=kz_org,
+    #                                                                                                stock_date=stock_date,
+    #                                                                                                work_dir=workDir)
+    #         kz_stocks_load.override(task_id=f"load_stocks_{kz_org.lower()}")(file_name=data_file, owner=kz_org)
 
     ### APPLY ORDERS ###
     @task
@@ -642,10 +642,10 @@ def test_dag():
     dateFrom = initParams["dateFrom"]
     workDir = initParams["workDir"]
 
-    kz_init = init_kz(stock_date=dateTo, work_dir=workDir)
-    kz_stock_date = kz_init["stock_date"]
-    kz_work_dir = kz_init["work_dir"]
-    kz_orgs = []
+    # kz_init = init_kz(stock_date=dateTo, work_dir=workDir)
+    # kz_stock_date = kz_init["stock_date"]
+    # kz_work_dir = kz_init["work_dir"]
+    # kz_orgs = []
 
     apply_data_task = apply_data(dateFrom)
 
@@ -653,7 +653,7 @@ def test_dag():
 
     apply_stock_task = apply_stock(stock_date=dateTo)
 
-    apply_stock_kz_task = apply_stock_kz(stock_date=dateTo)
+    # apply_stock_kz_task = apply_stock_kz(stock_date=dateTo)
 
     sql_path = importlib_resources.files(__name__).joinpath("sql/select_orgs.sql")
     with open(sql_path, "r") as file:
@@ -684,12 +684,12 @@ def test_dag():
                     dateTo=dateTo,
                     workDir=workDir
                 ) >> [apply_stock_task, apply_data_task, apply_sale_task]
-            elif source == "KZEXP":
-                kz_orgs.append(owner)
+            # elif source == "KZEXP":
+            #     kz_orgs.append(owner)
 
-    kz_loaded = kz_stock_tg(stock_date=kz_stock_date, workDir=kz_work_dir, kz_orgs=kz_orgs)
-
-    apply_stock_task >> kz_loaded >> apply_stock_kz_task
+    # kz_loaded = kz_stock_tg(stock_date=kz_stock_date, workDir=kz_work_dir, kz_orgs=kz_orgs)
+    #
+    # apply_stock_task >> kz_loaded >> apply_stock_kz_task
 
     ###  INTEGRATION  ###
 
