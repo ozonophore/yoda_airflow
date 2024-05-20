@@ -163,6 +163,8 @@ def load_price(id: int, fileName: str, database, user, password, host, port: str
     finally:
         conn.close()
 
+class EmptyResultError(Exception):
+    pass
 
 def extract_prices(id: int, file_name, token: str) -> None:
     r"""
@@ -198,6 +200,9 @@ def extract_prices(id: int, file_name, token: str) -> None:
             req.raise_for_status()
             data = req.json()
             result = data["result"]
+            if not result:
+                raise EmptyResultError(f"Error in response: {data}")
+
             pagination = result["pagination"]
             pages_cnt = pagination["pages_cnt"]
             max_page = pagination["page"]
