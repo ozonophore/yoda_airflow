@@ -218,7 +218,10 @@ def extract_prices(id: int, file_name, token: str) -> None:
                 category_name = obj["category_name"]
                 brand_name = obj["brand_name"]
                 default_price = obj["default_price"]
-                sources = obj["sources"]
+                sources = obj.get("sources")
+                if not sources:
+                    logging.info(f"Sources is empty for {client_code}")
+                    continue
                 for source in sources:
                     company_id = source["company_id"]
                     if company_id == False:
