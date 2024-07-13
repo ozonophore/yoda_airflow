@@ -4,6 +4,59 @@ import logging
 from dags import httpclient
 
 
+def extract_stock_sale(id: int, stockDate: datetime.date, writer, owner: str, skus: dict, clientId: str, token: str) -> None:
+    headers = {
+        "Client-Id": clientId,
+        "Api-Key": token,
+        "Content-Type": "application/json",
+    }
+    offset = 0
+    pageSize = 1000
+    # skus = set()
+    while True:
+        params = {
+            "warehouse_type": "ALL",
+            "limit": pageSize,
+            "offset": offset
+        }
+        resp = httpclient.post("https://api-seller.ozon.ru/v2/analytics/stock_on_warehouses",
+                               headers=headers,
+                               json=params
+                               )
+        resp.raise_for_status()
+        items = resp.json()['result']
+        rows = items['rows']
+        size = len(rows)
+        logging.info("Size: %s", size)
+        for row in rows:
+            # skus.add(row['sku'])
+            writer.writerow(
+                [owner,
+                 stockDate,
+                 row['sku'],
+                 None,
+                 None,
+                 None,
+                 None,
+                 None,
+                 None,
+                 None,
+                 row['item_name'],
+                 None,
+                 None,
+                 str(row['warehouse_name']).upper(),
+                 None,
+                 None,
+                 row['free_to_sell_amount'],
+                 id,
+                 skus.get(row['sku']),
+                 ]
+            )
+
+        if size < pageSize:
+            break
+        offset += pageSize
+
 def extract_stock(id: int, stockDate: datetime.date, writer, owner: str, skus: dict, clientId: str, token: str) -> None:
     header = {
         "Client-Id": clientId,

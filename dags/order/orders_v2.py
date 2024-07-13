@@ -5,7 +5,7 @@ import shutil
 import sys
 
 import importlib_resources
-from airflow.models import Param, Connection
+from airflow.models import Param, Connection, Variable
 from airflow.operators.python import get_current_context
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
@@ -353,12 +353,21 @@ def test_dag():
             return - имя файла с данными
         """
         id = get_current_context()["dag_run"].id
-        conn = Connection.get_connection_from_secrets(f"OZON_{owner.upper()}_STAT")
         fileName = f"{workDir}/stock_ozon_{owner.lower()}_{stock_date.strftime('%Y%m%d')}.data"
+        stock_from_sales = Variable.get("stock_from_sales", default_var=False)
+        if stock_from_sales:
+            conn_name = f"OZON_{owner.upper()}"
+        else:
+            conn_name = f"OZON_{owner.upper()}_STAT"
+        conn = Connection.get_connection_from_secrets(conn_name)
         with open(fileName, 'w') as f:
             writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
-            ozon.extract_stock(id=id, stockDate=stock_date, owner=owner, skus=skus, clientId=conn.login,
-                               token=conn.password, writer=writer)
+            if stock_from_sales:
+                ozon.extract_stock_from_sales(id=id, stockDate=stock_date, owner=owner, skus=skus, clientId=conn.login,
+                                              token=conn.password, writer=writer)
+            else:
+                ozon.extract_stock(id=id, stockDate=stock_date, owner=owner, skus=skus, clientId=conn.login,
+                                   token=conn.password, writer=writer)
         return fileName
 
     @task()
