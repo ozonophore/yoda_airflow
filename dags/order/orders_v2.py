@@ -364,7 +364,7 @@ def test_dag():
         with open(fileName, 'w') as f:
             writer = csv.writer(f, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
             if stock_from_sales:
-                ozon.extract_stock_from_sales(id=id, stockDate=stock_date, owner=owner, skus=skus, clientId=conn.login,
+                ozon.extract_stock_sale(id=id, stockDate=stock_date, owner=owner, skus=skus, clientId=conn.login,
                                               token=conn.password, writer=writer)
             else:
                 ozon.extract_stock(id=id, stockDate=stock_date, owner=owner, skus=skus, clientId=conn.login,
