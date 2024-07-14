@@ -355,6 +355,7 @@ def test_dag():
         id = get_current_context()["dag_run"].id
         fileName = f"{workDir}/stock_ozon_{owner.lower()}_{stock_date.strftime('%Y%m%d')}.data"
         stock_from_sales = Variable.get("stock_from_sales", default_var=False)
+        logging.info(f"Stock from sales: {stock_from_sales}")
         if stock_from_sales:
             conn_name = f"OZON_{owner.upper()}"
         else:
