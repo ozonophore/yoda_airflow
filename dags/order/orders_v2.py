@@ -11,6 +11,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 sys.path.append('/opt/airflow')
 
+from dags.common.copy import copy_data_in_chunks
 from dags import ozon, wb, integration, kzexp
 
 from datetime import datetime, date, timedelta
@@ -72,39 +73,44 @@ def test_dag():
 
     @task()
     def wb_load_orders(fileName: str) -> None:
-        PostgresHook(
-            postgres_conn_id=default_args["conn_id"]
-        ).copy_expert(
-            'COPY dl.tmp_orders_wb(date, ' +
-            'owner_code, ' +
-            'last_change_date, ' +
-            'supplier_article, ' +
-            'tech_size, ' +
-            'barcode, ' +
-            'total_price, ' +
-            'discount_percent, ' +
-            'warehouse_name, ' +
-            'oblast, ' +
-            'income_id, ' +
-            'odid, ' +
-            'subject, ' +
-            'category, ' +
-            'brand, ' +
-            'is_cancel, ' +
-            'cancel_dt, ' +
-            'g_number, ' +
-            'sticker, ' +
-            'srid, ' +
-            'order_type, ' +
-            'nm_id, ' +
-            'spp, ' +
-            'finished_price, ' +
-            'price_with_disc, ' +
-            'country_name, ' +
-            'oblast_okrug_name, ' +
-            'region_name, '
-            'transaction_id) FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')',
-            f'{fileName}')
+        sql = (
+                'COPY dl.tmp_orders_wb(date, ' +
+                'owner_code, ' +
+                'last_change_date, ' +
+                'supplier_article, ' +
+                'tech_size, ' +
+                'barcode, ' +
+                'total_price, ' +
+                'discount_percent, ' +
+                'warehouse_name, ' +
+                'oblast, ' +
+                'income_id, ' +
+                'odid, ' +
+                'subject, ' +
+                'category, ' +
+                'brand, ' +
+                'is_cancel, ' +
+                'cancel_dt, ' +
+                'g_number, ' +
+                'sticker, ' +
+                'srid, ' +
+                'order_type, ' +
+                'nm_id, ' +
+                'spp, ' +
+                'finished_price, ' +
+                'price_with_disc, ' +
+                'country_name, ' +
+                'oblast_okrug_name, ' +
+                'region_name, '
+                'transaction_id) FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')'
+        )
+        connection = Connection.get_connection_from_secrets(default_args["conn_id"])
+        copy_data_in_chunks(fileName, sql, connection, 5000)
+        # PostgresHook(
+        #     postgres_conn_id=default_args["conn_id"]
+        # ).copy_expert(
+        #     sql,
+        #     f'{fileName}')
 
     @task()
     def wb_extract_sale(owner: str, dateFrom: date, dateTo: date, workDir: str) -> str:
@@ -125,39 +131,44 @@ def test_dag():
 
     @task()
     def wb_load_sales(fileName: str) -> None:
-        PostgresHook(
-            postgres_conn_id=default_args["conn_id"]
-        ).copy_expert(
-            'COPY dl.tmp_sale(date, ' +
-            'owner_code, ' +
-            'last_change_date, ' +
-            'warehouse_name, ' +
-            'country_name, ' +
-            'oblast_okrug_name, ' +
-            'region_name, ' +
-            'supplier_article, ' +
-            'barcode, ' +
-            'category, ' +
-            'subject, ' +
-            'brand, ' +
-            'tech_size, ' +
-            'income_id, ' +
-            'is_supply, ' +
-            'is_realization, ' +
-            'total_price, ' +
-            'discount_percent, ' +
-            'spp, ' +
-            'for_pay, ' +
-            'finished_price, ' +
-            'price_with_disc, ' +
-            'sale_id, ' +
-            'sticker, ' +
-            'g_number, ' +
-            'odid, ' +
-            'srid, ' +
-            'nm_id, ' +
-            'transaction_id) FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')',
-            f'{fileName}')
+        sql = (
+                'COPY dl.tmp_sale(date, ' +
+                'owner_code, ' +
+                'last_change_date, ' +
+                'warehouse_name, ' +
+                'country_name, ' +
+                'oblast_okrug_name, ' +
+                'region_name, ' +
+                'supplier_article, ' +
+                'barcode, ' +
+                'category, ' +
+                'subject, ' +
+                'brand, ' +
+                'tech_size, ' +
+                'income_id, ' +
+                'is_supply, ' +
+                'is_realization, ' +
+                'total_price, ' +
+                'discount_percent, ' +
+                'spp, ' +
+                'for_pay, ' +
+                'finished_price, ' +
+                'price_with_disc, ' +
+                'sale_id, ' +
+                'sticker, ' +
+                'g_number, ' +
+                'odid, ' +
+                'srid, ' +
+                'nm_id, ' +
+                'transaction_id) FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')'
+        )
+        connection = Connection.get_connection_from_secrets(default_args["conn_id"])
+        copy_data_in_chunks(fileName, sql, connection, 5000)
+        # PostgresHook(
+        #     postgres_conn_id=default_args["conn_id"]
+        # ).copy_expert(
+        #     sql,
+        #     f'{fileName}')
 
     @task()
     def wb_extract_stocks(owner: str, workDir: str, stockDate: date) -> str:
@@ -301,8 +312,8 @@ def test_dag():
     @task()
     def load_data(owner: str, fileName: str) -> None:
         logging.info(f"Load data from file: {fileName}")
-        PostgresHook(postgres_conn_id=default_args["conn_id"]).copy_expert(
-            "COPY dl.tmp_orders_ozon("
+        connection = Connection.get_connection_from_secrets(default_args["conn_id"])
+        sql: str = ("COPY dl.tmp_orders_ozon("
             "owner_code," +
             "order_id," +
             "order_number," +
@@ -328,8 +339,11 @@ def test_dag():
             "total_discount_percent," +
             "client_price,"
             "transaction_id,"
-            "schema) FROM STDIN WITH (FORMAT CSV, DELIMITER E'\\t', HEADER FALSE, QUOTE E'\\b')",
-            fileName)
+            "schema) FROM STDIN WITH (FORMAT CSV, DELIMITER E'\\t', HEADER FALSE, QUOTE E'\\b')")
+        copy_data_in_chunks(fileName, sql, connection, 5000)
+        # PostgresHook(postgres_conn_id=default_args["conn_id"]).copy_expert(
+        #     sql,
+        #     fileName)
 
     @task()
     def ozon_extract_all_sku(owner: str) -> set:
