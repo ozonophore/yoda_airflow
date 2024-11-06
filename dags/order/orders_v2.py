@@ -5,6 +5,7 @@ import shutil
 import sys
 
 import importlib_resources
+import psycopg2
 from airflow.models import Param, Connection, Variable
 from airflow.operators.python import get_current_context
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -104,7 +105,14 @@ def test_dag():
                 'region_name, '
                 'transaction_id) FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')'
         )
-        connection = Connection.get_connection_from_secrets(default_args["conn_id"])
+        conn = Connection.get_connection_from_secrets(default_args["conn_id"])
+        connection = psycopg2.connect(
+            dbname=conn.schema,
+            user=conn.login,
+            password=conn.password,
+            host=conn.host,
+            port=conn.port
+        )
         copy_data_in_chunks(fileName, sql, connection, 5000)
         # PostgresHook(
         #     postgres_conn_id=default_args["conn_id"]
@@ -162,7 +170,14 @@ def test_dag():
                 'nm_id, ' +
                 'transaction_id) FROM STDIN WITH (FORMAT CSV, DELIMITER E\'\\t\', HEADER FALSE, QUOTE E\'\\b\')'
         )
-        connection = Connection.get_connection_from_secrets(default_args["conn_id"])
+        conn = Connection.get_connection_from_secrets(default_args["conn_id"])
+        connection = psycopg2.connect(
+            dbname=conn.schema,
+            user=conn.login,
+            password=conn.password,
+            host=conn.host,
+            port=conn.port
+        )
         copy_data_in_chunks(fileName, sql, connection, 5000)
         # PostgresHook(
         #     postgres_conn_id=default_args["conn_id"]
@@ -312,7 +327,14 @@ def test_dag():
     @task()
     def load_data(owner: str, fileName: str) -> None:
         logging.info(f"Load data from file: {fileName}")
-        connection = Connection.get_connection_from_secrets(default_args["conn_id"])
+        conn = Connection.get_connection_from_secrets(default_args["conn_id"])
+        connection = psycopg2.connect(
+            dbname=conn.schema,
+            user=conn.login,
+            password=conn.password,
+            host=conn.host,
+            port=conn.port
+        )
         sql: str = ("COPY dl.tmp_orders_ozon("
             "owner_code," +
             "order_id," +
