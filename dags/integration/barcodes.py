@@ -22,7 +22,7 @@ def extract_barcodes(id: int, writer, host: str, token: str) -> None:
         if item["barcodeID"] == "00000000-0000-0000-0000-000000000000":
             continue
         value = item.get("RRC")
-        rrc = 0 if value is None or value.strip() == "" else float(value)
+        rrc = 0 if value is None or value.strip() == "" else float(value.replace(",", "."))
         writer.writerow([
             item["id"],
             item["barcodeID"],
