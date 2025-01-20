@@ -27,7 +27,7 @@ DEFAULT_ARGS = {
     'off_days': 60,
     'work_dir': 'data/',
     'retries': 3,
-    'host': 'https://performance.ozon.ru',
+    'host': 'https://api-performance.ozon.ru',
 }
 
 
