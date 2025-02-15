@@ -27,6 +27,7 @@ def __extract_attributes(clientId: str, token: str, prodict_ids: list) -> dict:
     result = dict()
     for item in items:
         attributes = item['attributes']
+        logging.info("Extract product attributes: %s", attributes)
         for attribute in attributes:
             if attribute['id'] == 85 and len(attribute['values']) > 0:
                 brand = attribute['values'][0]['value']
