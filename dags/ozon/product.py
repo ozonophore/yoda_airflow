@@ -13,7 +13,7 @@ def __extract_attributes(clientId: str, token: str, prodict_ids: list) -> dict:
         return - словарь id товара - атрибуты
     """
     logging.info("Extract product attributes")
-    resp = httpclient.post(f"https://api-seller.ozon.ru/v4/products/info/attributes",
+    resp = httpclient.post(f"https://api-seller.ozon.ru/v4/product/info/attributes",
                            headers=__create_header(clientId, token), json={
             "filter": {
                 "product_id": prodict_ids,
