@@ -28,9 +28,9 @@ def __extract_attributes(clientId: str, token: str, prodict_ids: list) -> dict:
     for item in items:
         attributes = item['attributes']
         for attribute in attributes:
-            if attribute['attribute_id'] == 85 and len(attribute['values']) > 0:
+            if attribute['id'] == 85 and len(attribute['values']) > 0:
                 brand = attribute['values'][0]['value']
-            if attribute['attribute_id'] == 8229 and len(attribute['values']) > 0:
+            if attribute['id'] == 8229 and len(attribute['values']) > 0:
                 category = attribute['values'][0]['value']
         result[item['id']] = {
             'brand': brand,
