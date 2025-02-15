@@ -165,7 +165,7 @@ def get_product_ids(clientId: str, token: str) -> set:
     }
     product_ids = set()
     while True:
-        req = httpclient.post("https://api-seller.ozon.ru/v2/product/list", headers=header, json=params)
+        req = httpclient.post("https://api-seller.ozon.ru/v3/product/list", headers=header, json=params)
         req.raise_for_status()
         result = req.json()["result"]
         items = result["items"]
