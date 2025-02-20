@@ -63,7 +63,7 @@ def extract_product_info(id: int, writer, owner: str, clientId: str, token: str,
     loaded = set()
     while True:
         items = lst[index:offset]
-        resp = httpclient.post('https://api-seller.ozon.ru/v2/product/info/list', headers=header, json={
+        resp = httpclient.post('https://api-seller.ozon.ru/v3/product/info/list', headers=header, json={
             "sku": items
         })
         resp.raise_for_status()
@@ -132,7 +132,7 @@ def get_sku_by_product_id(clientId: str, token: str, product_ids: set) -> dict:
     loaded = dict()
     while True:
         items = lst[index:offset]
-        resp = httpclient.post('https://api-seller.ozon.ru/v2/product/info/list', headers=header, json={
+        resp = httpclient.post('https://api-seller.ozon.ru/v3/product/info/list', headers=header, json={
             "product_id": items
         })
         resp.raise_for_status()
