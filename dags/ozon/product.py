@@ -132,6 +132,7 @@ def get_sku_by_product_id(clientId: str, token: str, product_ids: set) -> dict:
     loaded = dict()
     while True:
         items = lst[index:offset]
+        logging.info("Extract product info: %s", items)
         resp = httpclient.post('https://api-seller.ozon.ru/v3/product/info/list', headers=header, json={
             "product_id": items
         })
