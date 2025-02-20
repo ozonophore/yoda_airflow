@@ -599,7 +599,7 @@ def orders():
             spamwriter = csv.writer(csvfile, delimiter='\t', quoting=csv.QUOTE_MINIMAL)
             while offset < size:
                 values = arr[offset:offset + pageSize]
-                resp = request_repeater('POST', url=f"https://api-seller.ozon.ru/v2/product/info/list", headers={
+                resp = request_repeater('POST', url=f"https://api-seller.ozon.ru/v3/product/info/list", headers={
                     "Client-Id": clientId,
                     "Api-Key": token,
                     "Content-Type": "application/json",
